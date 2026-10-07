@@ -1,4 +1,4 @@
 *.venv
-Data/processed/*
+Data/*
 */*/__pycache__/*
 */__pycache__/*
