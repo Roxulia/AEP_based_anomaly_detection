@@ -173,6 +173,49 @@ class MarkovModel:
             least_probable_transitions=least_probable,
         )
 
+    def to_dict(self) -> dict[str, object]:
+        """Return a JSON-compatible representation of a fitted model."""
+        self._require_fitted()
+        if any(not isinstance(state, tuple) or not all(isinstance(part, str) for part in state)
+               for state in self._states):
+            raise TypeError("JSON model persistence supports tuple-of-string request states")
+        return {
+            "smoothing": self.smoothing,
+            "states": [list(state) for state in self._states],
+            "initial_probabilities": [self._initial_probabilities[state] for state in self._states],
+            "transition_probabilities": [
+                [self._transition_probabilities[source][target] for target in self._states]
+                for source in self._states
+            ],
+            "stationary_probabilities": list(self._stationary_probabilities),
+            "entropy_rate_bits": self._entropy_rate_bits,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, object]) -> "MarkovModel":
+        """Reconstruct a fitted model saved by :meth:`to_dict`."""
+        states = tuple(tuple(str(part) for part in state) for state in data["states"])  # type: ignore[arg-type]
+        initial = data["initial_probabilities"]
+        matrix = data["transition_probabilities"]
+        stationary = data["stationary_probabilities"]
+        if not states or len(initial) != len(states) or len(matrix) != len(states):  # type: ignore[arg-type]
+            raise ValueError("invalid serialized Markov model dimensions")
+        model = cls(smoothing=float(data["smoothing"]))
+        model._states = states
+        model._initial_probabilities = {state: float(initial[index]) for index, state in enumerate(states)}  # type: ignore[index]
+        model._transition_probabilities = {
+            source: {target: float(matrix[i][j]) for j, target in enumerate(states)}  # type: ignore[index]
+            for i, source in enumerate(states)
+        }
+        model._stationary_probabilities = tuple(float(value) for value in stationary)  # type: ignore[arg-type]
+        model._entropy_rate_bits = float(data["entropy_rate_bits"])
+        if (not math.isfinite(model._entropy_rate_bits)
+                or any(not math.isfinite(value) or value <= 0 for value in model._initial_probabilities.values())
+                or len(model._stationary_probabilities) != len(states)):
+            raise ValueError("serialized Markov model contains invalid probabilities")
+        model._fitted = True
+        return model
+
     def _calculate_stationary_distribution(self) -> tuple[float, ...]:
         state_count = len(self._states)
         transition_matrix = np.array(

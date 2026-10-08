@@ -1,0 +1,18 @@
+window:
+  type: fixed_count
+  size: 50
+  include_partial: false
+split:
+  training: 0.65
+  validation: 0.15
+  testing: 0.20
+markov:
+  smoothing: 0.5
+aep:
+  quantile: 0.99
+density:
+  bandwidth: scott
+  epsilon: 1.0e-12
+  quantile: 0.99
+detector:
+  mode: hybrid

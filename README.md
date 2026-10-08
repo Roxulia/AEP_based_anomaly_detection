@@ -1,31 +1,44 @@
 # AEP + Markov + Entropy-Density Server Anomaly Detection
 
-## Parse logs
+## Workflow
 
-Activate the project virtual environment, then run from the repository root:
+Run commands from the repository root (activate `.venv` first if used):
 
 ```powershell
-.\.venv\Scripts\python.exe -m src.aep_anomaly
+python -m src.aep_anomaly parse --input-dir Data/logs --output-dir Data/processed
+python -c "from src.aep_anomaly import RoutePreprocessor; RoutePreprocessor().process_csv('Data/processed/routes.csv', 'Data/processed/route_events.csv')"
+python -m src.aep_anomaly train --input-csv Data/processed/route_events.csv --model-dir models/default --config config/default.yaml
+python -m src.aep_anomaly detect --input-csv Data/processed/route_events.csv --model-dir models/default --output Data/processed/detections.jsonl
 ```
 
-The parser reads `Data/logs` and writes `routes.csv`, `controllers.csv`, and
-`services.csv` under `Data/processed`. Override either directory with
-`--input-dir` or `--output-dir`.
+The no-argument command remains equivalent to `parse`. Parsing preserves raw
+lines and reports malformed entries. Preprocessing keeps valid route events,
+normalizes routes, and orders them by timestamp. Training and detection consume
+that preprocessed event CSV.
 
-Each CSV keeps the original log line and includes a `parse_status` column.
-Malformed lines remain in the output and are counted in the command summary.
+## Training and detection behavior
 
-## Core scoring classes
+`config/default.yaml` selects non-overlapping 50-event windows and a chronological
+65% training / 15% validation / 20% testing split. Incomplete final windows are
+excluded. Set `window.type` to `fixed_time` and `window.size` to a duration in
+seconds for time windows. Models and KDE are fit on training windows; AEP and
+density thresholds are learned from validation windows. The test partition is
+reserved and is not used for fitting or thresholds.
 
-The reusable mathematical components are available from `src.aep_anomaly`:
+The default `hybrid` mode flags a window when either AEP deviation or
+information-score density flags it. Use `aep` or `density` for individual
+detectors. Each JSONL detection row includes the events and encoded states,
+Markov log probability, information score, entropy rate, both detector scores
+and thresholds, component decisions, final decision, and least-probable
+transitions. A state not present during training raises an explicit error.
 
-- `MarkovModel` fits first-order transition and initial-state probabilities,
-  exposes entropy rate, and scores a caller-provided sequence in log space.
-- `AEPDetector` learns a deviation threshold from validation information scores
-  and classifies scores against a supplied entropy rate.
-- `InformationScoreDensity` fits a Gaussian KDE to normal information scores
-  and returns density and negative log-density scores.
+The model bundle contains `model.json` (versioned configuration, state mapping,
+Markov probabilities, thresholds, and split counts) and `density.pkl` (the fitted
+SciPy KDE wrapper). Only load pickle artifacts from trusted sources.
 
-These classes do not read files, create windows, or call each other. For this
-project, callers can represent a request as `(method, normalized_uri,
-status_class)` and pass sequences of those states to `MarkovModel`.
+## Reusable components
+
+`MarkovModel`, `AEPDetector`, `InformationScoreDensity`, `load_windows`,
+`chronological_split`, `train_model`, and `TrainedDetector` are available from
+`src.aep_anomaly`. Markov probabilities and sequence likelihoods use log-space
+scoring; encoded request states are `(method, normalized_uri, status_class)`.
