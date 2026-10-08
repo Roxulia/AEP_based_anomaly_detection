@@ -1,11 +1,12 @@
+datasets:
+  train_dir: Data/Train
+  validate_dir: Data/Validate
+  test_dir: Data/Test
+  processed_dir: Data/processed
 window:
   type: fixed_count
   size: 50
   include_partial: false
-split:
-  training: 0.65
-  validation: 0.15
-  testing: 0.20
 markov:
   smoothing: 0.5
 aep:

@@ -1,4 +1,9 @@
 *.venv
+.venv/
 Data/*
+models/
+reports/evaluation/
+frontend/node_modules/
+frontend/dist/
 */*/__pycache__/*
 */__pycache__/*

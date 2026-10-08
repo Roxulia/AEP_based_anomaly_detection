@@ -2,3 +2,6 @@ numpy
 scipy
 PyYAML
 matplotlib
+fastapi
+uvicorn[standard]
+python-multipart

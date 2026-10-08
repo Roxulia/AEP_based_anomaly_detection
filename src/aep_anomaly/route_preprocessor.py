@@ -13,7 +13,7 @@ from .event_encoder import EventEncoder
 
 OUTPUT_FIELDS = (
     "timestamp", "method", "normalized_uri", "status_class", "source_file",
-    "route_name", "uri", "status", "raw_line",
+    "route_name", "uri", "status", "raw_line", "label", "is_anomaly", "ground_truth",
 )
 
 
@@ -79,6 +79,9 @@ class RoutePreprocessor:
                     "uri": row.get("uri", ""),
                     "status": row.get("status", ""),
                     "raw_line": row.get("raw_line", ""),
+                    "label": row.get("label", "") or "",
+                    "is_anomaly": row.get("is_anomaly", "") or "",
+                    "ground_truth": row.get("ground_truth", "") or "",
                 }
                 records.append((parsed_timestamp, row_number, record))
 

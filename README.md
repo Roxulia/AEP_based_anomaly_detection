@@ -1,44 +1,67 @@
-# AEP + Markov + Entropy-Density Server Anomaly Detection
+# Server Statistical Anomaly Detection
 
-## Workflow
+This project analyzes server request logs with a first-order Markov sequence model, entropy rate, AEP deviation, and KDE-based information-score density. The output describes activity that is statistically atypical under the fitted detector; it does not establish malicious intent and is not a generic machine-learning classifier.
 
-Run commands from the repository root (activate `.venv` first if used):
+## Dataset folders
 
-```powershell
-python -m src.aep_anomaly parse --input-dir Data/logs --output-dir Data/processed
-python -c "from src.aep_anomaly import RoutePreprocessor; RoutePreprocessor().process_csv('Data/processed/routes.csv', 'Data/processed/route_events.csv')"
-python -m src.aep_anomaly train --input-csv Data/processed/route_events.csv --model-dir models/default --config config/default.yaml
-python -m src.aep_anomaly detect --input-csv Data/processed/route_events.csv --model-dir models/default --output Data/processed/detections.jsonl
+The default locations are configurable in `config/default.yaml` and are placeholders until you add the datasets:
+
+```text
+Data/Train/       # fit transition probabilities, entropy rate, and KDE
+Data/Validate/    # calibrate AEP and density thresholds
+Data/Test/        # held-out evaluation only
 ```
 
-The no-argument command remains equivalent to `parse`. Parsing preserves raw
-lines and reports malformed entries. Preprocessing keeps valid route events,
-normalizes routes, and orders them by timestamp. Training and detection consume
-that preprocessed event CSV.
+The folders are used as provided. The folder workflow does not split them again. Raw route logs should use the supported `routes-*.log` format. The parser preserves malformed lines in its parsed CSV and reports parsing/preprocessing counts.
 
-## Training and detection behavior
+## Build and evaluate
 
-`config/default.yaml` selects non-overlapping 50-event windows and a chronological
-65% training / 15% validation / 20% testing split. Incomplete final windows are
-excluded. Set `window.type` to `fixed_time` and `window.size` to a duration in
-seconds for time windows. Models and KDE are fit on training windows; AEP and
-density thresholds are learned from validation windows. The test partition is
-reserved and is not used for fitting or thresholds.
+From the repository root, activate the Python environment and run:
 
-The default `hybrid` mode flags a window when either AEP deviation or
-information-score density flags it. Use `aep` or `density` for individual
-detectors. Each JSONL detection row includes the events and encoded states,
-Markov log probability, information score, entropy rate, both detector scores
-and thresholds, component decisions, final decision, and least-probable
-transitions. A state not present during training raises an explicit error.
+```powershell
+python -m src.aep_anomaly build
+python -m src.aep_anomaly evaluate
+```
 
-The model bundle contains `model.json` (versioned configuration, state mapping,
-Markov probabilities, thresholds, and split counts) and `density.pkl` (the fitted
-SciPy KDE wrapper). Only load pickle artifacts from trusted sources.
+`build` fits the statistical detector using Train and calibrates thresholds from Validate. It saves `models/default/model.json` and `models/default/density.pkl`, plus prepared CSV files under `Data/processed/`. `evaluate` scores the separate Test folder in AEP-only, density-only, and hybrid modes and writes `reports/evaluation/evaluation.json` and one JSONL file per detector mode. If test windows do not contain usable ground-truth labels, the report marks classification metrics unavailable while still reporting scoreable/outlier window counts.
 
-## Reusable components
+Override configured folders when needed:
 
-`MarkovModel`, `AEPDetector`, `InformationScoreDensity`, `load_windows`,
-`chronological_split`, `train_model`, and `TrainedDetector` are available from
-`src.aep_anomaly`. Markov probabilities and sequence likelihoods use log-space
-scoring; encoded request states are `(method, normalized_uri, status_class)`.
+```powershell
+python -m src.aep_anomaly build --train-dir Data/Train --validate-dir Data/Validate
+python -m src.aep_anomaly evaluate --test-dir Data/Test
+```
+
+Existing `parse`, CSV `train`, and `detect` CLI commands remain available for direct pipeline use. `train` retains its legacy chronological split behavior; use `build` for the separate-folder workflow above.
+
+## Dashboard and experiments
+
+Install API dependencies with `pip install -r requirements.txt`, then run the local API:
+
+```powershell
+python -m src.aep_anomaly serve
+```
+
+In another terminal:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Open the Vite URL shown in the terminal. The dashboard shows dataset readiness, detector composition, evaluation comparisons, and persisted alerts. The Experiments page accepts raw `.log` or `.txt` files in the supported request-log format and scores them with the saved detector. API paths can be configured with `AEP_CONFIG`, `AEP_MODEL_DIR`, `AEP_WATCH_DIR`, `AEP_ALERT_DB`, and frontend `VITE_API_URL`.
+
+## Continuous monitoring
+
+Place route log files named `routes-*.log` in the watched folder (default `Data/live`). Start the poller after building the detector:
+
+```powershell
+python -m src.aep_anomaly monitor --watch-dir Data/live --model-dir models/default --database Data/alerts.sqlite3
+```
+
+The monitor polls appended and rotated files, retains partial final lines until complete, builds fixed-count windows, preserves malformed lines in its SQLite skipped-line ledger, and stores anomalous or unscorable windows in SQLite. The API exposes alert listing and acknowledgement; the dashboard refreshes alert data every ten seconds and can request a one-time scan. Continuous monitoring currently uses fixed-count windows. Direct hosted-site ingestion and external notification services are future extensions.
+
+## Statistical outputs
+
+Per-window results include normalized self-information, entropy rate, AEP deviation and threshold, KDE information-score density and threshold, detector decision, source events, and least-probable transitions. Unknown states are reported as unscorable rather than mapped to existing states. Model and density artifacts should be loaded only from trusted sources because the KDE wrapper is stored using Python pickle.

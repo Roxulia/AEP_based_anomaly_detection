@@ -5,9 +5,12 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 import sys
+import time
 
 from .log_parser import LogParser
-from .pipeline import detect_file, load_config, train_model
+from .pipeline import (detect_file, evaluate_directory, load_config, train_from_directories,
+                       train_model)
+from .monitor import LogFolderMonitor
 
 
 def main() -> int:
@@ -28,6 +31,27 @@ def main() -> int:
     detect.add_argument("--input-csv", type=Path, required=True)
     detect.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
     detect.add_argument("--output", type=Path, default=project_root / "Data" / "processed" / "detections.jsonl")
+    build = commands.add_parser("build", help="Fit a statistical detector from Train and Validate folders.")
+    build.add_argument("--config", type=Path, default=project_root / "config" / "default.yaml")
+    build.add_argument("--train-dir", type=Path)
+    build.add_argument("--validate-dir", type=Path)
+    build.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
+    build.add_argument("--work-dir", type=Path)
+    evaluate = commands.add_parser("evaluate", help="Evaluate a saved detector on a separate Test folder.")
+    evaluate.add_argument("--config", type=Path, default=project_root / "config" / "default.yaml")
+    evaluate.add_argument("--test-dir", type=Path)
+    evaluate.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
+    evaluate.add_argument("--output-dir", type=Path, default=project_root / "reports" / "evaluation")
+    evaluate.add_argument("--work-dir", type=Path)
+    serve = commands.add_parser("serve", help="Run the local dashboard API.")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    monitor = commands.add_parser("monitor", help="Poll a watched folder and persist dashboard alerts.")
+    monitor.add_argument("--watch-dir", type=Path, default=project_root / "Data" / "live")
+    monitor.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
+    monitor.add_argument("--database", type=Path, default=project_root / "Data" / "alerts.sqlite3")
+    monitor.add_argument("--interval", type=float, default=5.0)
+    monitor.add_argument("--window-size", type=int, default=50)
     args = parser.parse_args(arguments)
 
     if args.command == "parse":
@@ -39,6 +63,33 @@ def main() -> int:
         summary = train_model(args.input_csv, args.model_dir, load_config(args.config))
         print(f"trained model: {summary['model_dir']} ({summary['training']} train, "
               f"{summary['validation']} validation, {summary['testing']} test windows)")
+    elif args.command == "build":
+        config = load_config(args.config)
+        datasets = config["datasets"]
+        summary = train_from_directories(args.train_dir or datasets["train_dir"],
+                                         args.validate_dir or datasets["validate_dir"],
+                                         args.model_dir, config,
+                                         args.work_dir or Path(datasets["processed_dir"]))
+        print(f"saved statistical detector: {summary['model_dir']} ({summary['training']} train, "
+              f"{summary['validation']} validation windows)")
+    elif args.command == "evaluate":
+        config = load_config(args.config)
+        test_dir = args.test_dir or config["datasets"]["test_dir"]
+        report = evaluate_directory(test_dir, args.model_dir, args.output_dir, args.work_dir)
+        print(f"evaluated {report['window_count']} test windows; report: {args.output_dir / 'evaluation.json'}")
+    elif args.command == "serve":
+        import uvicorn
+        uvicorn.run("src.aep_anomaly.api:app", host=args.host, port=args.port, reload=False)
+    elif args.command == "monitor":
+        if args.interval <= 0:
+            parser.error("--interval must be greater than zero")
+        service = LogFolderMonitor(args.watch_dir, args.model_dir, args.database, args.window_size)
+        while True:
+            try:
+                print(service.scan_once())
+            except (OSError, ValueError) as error:
+                print(f"monitor scan failed: {error}", file=sys.stderr)
+            time.sleep(args.interval)
     else:
         count = detect_file(args.input_csv, args.model_dir, args.output)
         print(f"scored {count} windows: {args.output}")

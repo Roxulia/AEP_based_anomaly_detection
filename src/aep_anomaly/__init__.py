@@ -7,7 +7,10 @@ from .event_encoder import EventEncoder, EventState
 from .markov import MarkovModel, MarkovSequenceScore, TransitionDetail
 from .route_normalizer import RouteNormalizer
 from .route_preprocessor import PreprocessingSummary, RoutePreprocessor
-from .pipeline import TrainedDetector, detect_file, load_config, train_model
+from .pipeline import (TrainedDetector, analyze_uploaded_log, detect_file, evaluate_directory,
+                       evaluate_event_csv, load_config, prepare_log_directory,
+                       train_from_directories, train_model)
+from .monitor import LogFolderMonitor
 from .windowing import DatasetSplit, EventWindow, chronological_split, load_windows
 
 __all__ = [
@@ -20,6 +23,7 @@ __all__ = [
     "EventWindow",
     "InformationScoreDensity",
     "LogParser",
+    "LogFolderMonitor",
     "MarkovModel",
     "MarkovSequenceScore",
     "ParseStats",
@@ -29,8 +33,13 @@ __all__ = [
     "TransitionDetail",
     "TrainedDetector",
     "chronological_split",
+    "analyze_uploaded_log",
     "detect_file",
+    "evaluate_directory",
+    "evaluate_event_csv",
     "load_config",
     "load_windows",
+    "prepare_log_directory",
+    "train_from_directories",
     "train_model",
 ]
