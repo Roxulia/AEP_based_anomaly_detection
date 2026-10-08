@@ -39,7 +39,7 @@ class MarkovModel:
     """Fit and score a smoothed first-order Markov chain.
 
     States are any hashable values. For this project, request states can be
-    tuples of ``(method, normalized_uri, status_class)``.
+    tuples of ``(method, URL group, status category)``.
     """
 
     def __init__(self, smoothing: float = 0.5, stationary_tolerance: float = 1e-12) -> None:

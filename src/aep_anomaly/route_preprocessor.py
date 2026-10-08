@@ -12,8 +12,8 @@ from .event_encoder import EventEncoder
 
 
 OUTPUT_FIELDS = (
-    "timestamp", "method", "normalized_uri", "status_class", "source_file",
-    "route_name", "uri", "status", "raw_line", "label", "is_anomaly", "ground_truth",
+    "timestamp", "method", "normalized_uri", "status_class", "url_group", "status_category", "source_file",
+    "route_name", "uri", "status", "raw_line", "label",
 )
 
 
@@ -66,22 +66,24 @@ class RoutePreprocessor:
                     skipped["invalid_timestamp"] += 1
                     continue
 
-                method, normalized_uri, status_class = self.event_encoder.encode(
+                method, url_group, status_category = self.event_encoder.encode(
                     row.get("method"), row.get("uri"), row.get("status")
                 )
+                normalized_uri = self.event_encoder.route_normalizer.normalize(row.get("uri"))
+                status_class = self.event_encoder.status_class(row.get("status"))
                 record = {
                     "timestamp": timestamp,
                     "method": method,
                     "normalized_uri": normalized_uri,
                     "status_class": status_class,
+                    "url_group": url_group,
+                    "status_category": status_category,
                     "source_file": row.get("source_file", ""),
                     "route_name": row.get("route_name", ""),
                     "uri": row.get("uri", ""),
                     "status": row.get("status", ""),
                     "raw_line": row.get("raw_line", ""),
                     "label": row.get("label", "") or "",
-                    "is_anomaly": row.get("is_anomaly", "") or "",
-                    "ground_truth": row.get("ground_truth", "") or "",
                 }
                 records.append((parsed_timestamp, row_number, record))
 

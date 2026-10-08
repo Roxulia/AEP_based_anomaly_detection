@@ -62,9 +62,12 @@ class LogFolderMonitor:
                         row = LogParser._parse_line("routes", raw.decode("utf-8", errors="replace").rstrip("\r\n"), path.name)
                         if row["parse_status"] == "ok" and RoutePreprocessor._parse_timestamp(row["timestamp"]) is not None:
                             state = encoder.encode(row.get("method"), row.get("uri"), row.get("status"))
+                            normalized_uri = encoder.route_normalizer.normalize(row.get("uri"))
+                            status_class = encoder.status_class(row.get("status"))
                             event = {
                                 "timestamp": row["timestamp"], "method": state[0],
-                                "normalized_uri": state[1], "status_class": state[2],
+                                "normalized_uri": normalized_uri, "status_class": status_class,
+                                "url_group": state[1], "status_category": state[2],
                                 "source_file": path.name, "uri": row.get("uri", ""),
                                 "status": row.get("status", ""), "raw_line": row.get("raw_line", ""),
                             }
@@ -90,7 +93,8 @@ class LogFolderMonitor:
                 selected = ordered[:self.window_size]
                 records = [item[0] for item in selected]
                 selected_ids = [int(item[1]) for item in selected]
-                states = tuple((item["method"], item["normalized_uri"], item["status_class"])
+                states = tuple((item["method"], item.get("url_group", item["normalized_uri"]),
+                                item.get("status_category", item["status_class"]))
                                for item in records)
                 start_id = selected_ids[0]
                 window = EventWindow(start_id, records[0]["timestamp"], records[-1]["timestamp"],

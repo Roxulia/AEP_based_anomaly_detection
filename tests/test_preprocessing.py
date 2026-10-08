@@ -25,9 +25,9 @@ class RouteNormalizerTests(unittest.TestCase):
 
 
 class EventEncoderTests(unittest.TestCase):
-    def test_encodes_method_uri_and_http_status_class(self) -> None:
+    def test_encodes_method_url_group_and_status_category(self) -> None:
         state = EventEncoder().encode(" get ", "/users/123456?active=true", 404)
-        self.assertEqual(state, ("GET", "/users/:id", "4xx"))
+        self.assertEqual(state, ("GET", "route.users", "not_found"))
 
     def test_invalid_fields_are_marked_unknown(self) -> None:
         state = EventEncoder().encode(None, None, "not-a-status")

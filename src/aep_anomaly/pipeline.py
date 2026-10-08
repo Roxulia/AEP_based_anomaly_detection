@@ -13,6 +13,7 @@ import yaml
 
 from .aep import AEPDetector
 from .density import InformationScoreDensity
+from .event_encoder import STATE_ENCODING_VERSION
 from .markov import MarkovModel
 from .windowing import EventWindow, chronological_split, load_windows
 
@@ -122,6 +123,8 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     destination.mkdir(parents=True, exist_ok=True)
     model_doc = {
         "schema_version": 1,
+        "state_encoding": {"version": STATE_ENCODING_VERSION,
+                           "definition": ["method", "url_group", "status_category"]},
         "created_at": datetime.now(timezone.utc).isoformat(),
         "description": "Fitted statistical anomaly detector (Markov, AEP, information-score KDE)",
         "config": settings,
@@ -304,6 +307,8 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
     destination.mkdir(parents=True, exist_ok=True)
     model_doc = {
         "schema_version": 1,
+        "state_encoding": {"version": STATE_ENCODING_VERSION,
+                           "definition": ["method", "url_group", "status_category"]},
         "created_at": datetime.now(timezone.utc).isoformat(),
         "config": settings,
         "markov": model.to_dict(),
@@ -327,6 +332,8 @@ class TrainedDetector:
         self.metadata = json.loads((root / "model.json").read_text(encoding="utf-8"))
         if self.metadata.get("schema_version") != 1:
             raise ValueError("unsupported model bundle schema version")
+        if self.metadata.get("state_encoding", {}).get("version") != STATE_ENCODING_VERSION:
+            raise ValueError("model uses a different state encoding; rebuild it with the current pipeline")
         self.model = MarkovModel.from_dict(self.metadata["markov"])
         with (root / "density.pkl").open("rb") as stream:
             self.density: InformationScoreDensity = pickle.load(stream)
