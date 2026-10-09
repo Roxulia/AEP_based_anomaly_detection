@@ -11,6 +11,7 @@ import numpy as np
 
 
 State = Hashable
+UNKNOWN_STATE = "__UNK__"
 
 
 @dataclass(frozen=True)
@@ -33,13 +34,16 @@ class MarkovSequenceScore:
     initial_probability: float
     transition_probabilities: tuple[float, ...]
     least_probable_transitions: tuple[TransitionDetail, ...]
+    unknown_state_indices: tuple[int, ...] = ()
+    unknown_original_states: tuple[State, ...] = ()
+    scored_states: tuple[State, ...] = ()
 
 
 class MarkovModel:
     """Fit and score a smoothed first-order Markov chain.
 
-    States are any hashable values. For this project, request states can be
-    tuples of ``(method, URL group, status category)``.
+    Fit accepts hashable symbols without interpreting their meaning. Persisted
+    project models use opaque string state IDs supplied by preprocessing.
     """
 
     def __init__(self, smoothing: float = 0.5, stationary_tolerance: float = 1e-12) -> None:
@@ -95,6 +99,10 @@ class MarkovModel:
         if not materialized:
             raise ValueError("at least one non-empty training sequence is required")
 
+        # Keep a reserved symbol in the vocabulary so unseen states can be
+        # scored through the same smoothed model without pretending they were seen.
+        all_states.add(UNKNOWN_STATE)
+        self._observed_states = all_states.difference({UNKNOWN_STATE})
         # Stable ordering makes matrix and serialized diagnostic output repeatable.
         self._states = tuple(sorted(all_states, key=repr))
         state_count = len(self._states)
@@ -138,21 +146,21 @@ class MarkovModel:
         return self
 
     def score_sequence(self, sequence: Iterable[State]) -> MarkovSequenceScore:
-        """Score a sequence in log space; unseen states raise ``ValueError``."""
+        """Score in log space, mapping unseen request states to the reserved UNK state."""
         self._require_fitted()
         events = list(sequence)
         if not events:
             raise ValueError("cannot score an empty sequence")
-        unknown = [state for state in events if state not in self._initial_probabilities]
-        if unknown:
-            unique_unknown = list(dict.fromkeys(unknown))
-            raise ValueError(f"sequence contains states not observed during fit: {unique_unknown!r}")
+        unknown_indices = tuple(index for index, state in enumerate(events)
+                                if state not in self._observed_states)
+        unknown_original_states = tuple(events[index] for index in unknown_indices)
+        mapped_events = [state if state in self._observed_states else UNKNOWN_STATE for state in events]
 
-        initial_probability = self._initial_probabilities[events[0]]
+        initial_probability = self._initial_probabilities[mapped_events[0]]
         log_probability = math.log2(initial_probability)
         details: list[TransitionDetail] = []
         transition_probabilities: list[float] = []
-        for from_state, to_state in zip(events, events[1:]):
+        for from_state, to_state in zip(mapped_events, mapped_events[1:]):
             probability = self._transition_probabilities[from_state][to_state]
             if not math.isfinite(probability) or probability <= 0:
                 raise ArithmeticError("transition probability is not finite and positive")
@@ -171,17 +179,20 @@ class MarkovModel:
             initial_probability=initial_probability,
             transition_probabilities=tuple(transition_probabilities),
             least_probable_transitions=least_probable,
+            unknown_state_indices=unknown_indices,
+            unknown_original_states=unknown_original_states,
+            scored_states=tuple(mapped_events),
         )
 
     def to_dict(self) -> dict[str, object]:
         """Return a JSON-compatible representation of a fitted model."""
         self._require_fitted()
-        if any(not isinstance(state, tuple) or not all(isinstance(part, str) for part in state)
-               for state in self._states):
-            raise TypeError("JSON model persistence supports tuple-of-string request states")
+        if any(not isinstance(state, str) for state in self._states):
+            raise TypeError("JSON model persistence supports opaque string state IDs")
         return {
             "smoothing": self.smoothing,
-            "states": [list(state) for state in self._states],
+            "states": list(self._states),
+            "observed_states": sorted(self._observed_states),
             "initial_probabilities": [self._initial_probabilities[state] for state in self._states],
             "transition_probabilities": [
                 [self._transition_probabilities[source][target] for target in self._states]
@@ -194,7 +205,7 @@ class MarkovModel:
     @classmethod
     def from_dict(cls, data: dict[str, object]) -> "MarkovModel":
         """Reconstruct a fitted model saved by :meth:`to_dict`."""
-        states = tuple(tuple(str(part) for part in state) for state in data["states"])  # type: ignore[arg-type]
+        states = tuple(str(state) for state in data["states"])  # type: ignore[arg-type]
         initial = data["initial_probabilities"]
         matrix = data["transition_probabilities"]
         stationary = data["stationary_probabilities"]
@@ -202,6 +213,9 @@ class MarkovModel:
             raise ValueError("invalid serialized Markov model dimensions")
         model = cls(smoothing=float(data["smoothing"]))
         model._states = states
+        observed = data.get("observed_states")
+        model._observed_states = ({str(state) for state in observed}
+                                  if observed is not None else set(states).difference({UNKNOWN_STATE}))
         model._initial_probabilities = {state: float(initial[index]) for index, state in enumerate(states)}  # type: ignore[index]
         model._transition_probabilities = {
             source: {target: float(matrix[i][j]) for j, target in enumerate(states)}  # type: ignore[index]

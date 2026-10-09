@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -12,7 +13,8 @@ from .event_encoder import EventEncoder
 
 
 OUTPUT_FIELDS = (
-    "timestamp", "method", "normalized_uri", "status_class", "url_group", "status_category", "source_file",
+    "timestamp", "state_id", "state_description", "method", "normalized_uri", "status_class",
+    "url_group", "status_category", "ip", "source_file",
     "route_name", "uri", "status", "raw_line", "label",
 )
 
@@ -23,6 +25,7 @@ class PreprocessingSummary:
     processed_rows: int
     skipped_rows: int
     skipped_by_reason: dict[str, int]
+    missing_ip_rows: int
     output_path: Path
 
 
@@ -47,6 +50,7 @@ class RoutePreprocessor:
         skipped: Counter[str] = Counter()
         records: list[tuple[datetime, int, dict[str, str]]] = []
         input_rows = 0
+        missing_ip_rows = 0
         with input_path.open("r", encoding="utf-8-sig", newline="") as csv_file:
             reader = csv.DictReader(csv_file)
             required_columns = {"timestamp", "method", "uri", "status", "parse_status"}
@@ -66,18 +70,22 @@ class RoutePreprocessor:
                     skipped["invalid_timestamp"] += 1
                     continue
 
-                method, url_group, status_category = self.event_encoder.encode(
-                    row.get("method"), row.get("uri"), row.get("status")
-                )
+                state_id, description = self.event_encoder.encode_with_description(
+                    row.get("method"), row.get("uri"), row.get("status"))
+                if not (row.get("ip") or "").strip():
+                    missing_ip_rows += 1
                 normalized_uri = self.event_encoder.route_normalizer.normalize(row.get("uri"))
                 status_class = self.event_encoder.status_class(row.get("status"))
                 record = {
                     "timestamp": timestamp,
-                    "method": method,
+                    "state_id": state_id,
+                    "state_description": json.dumps(description, ensure_ascii=False, sort_keys=True),
+                    "method": description["method"],
                     "normalized_uri": normalized_uri,
                     "status_class": status_class,
-                    "url_group": url_group,
-                    "status_category": status_category,
+                    "url_group": description["url_group"],
+                    "status_category": description["status_category"],
+                    "ip": row.get("ip", ""),
                     "source_file": row.get("source_file", ""),
                     "route_name": row.get("route_name", ""),
                     "uri": row.get("uri", ""),
@@ -99,6 +107,7 @@ class RoutePreprocessor:
             processed_rows=len(records),
             skipped_rows=sum(skipped.values()),
             skipped_by_reason=dict(skipped),
+            missing_ip_rows=missing_ip_rows,
             output_path=output_path,
         )
 
@@ -113,3 +122,48 @@ class RoutePreprocessor:
         if parsed.tzinfo is None:
             parsed = parsed.replace(tzinfo=timezone.utc)
         return parsed.astimezone(timezone.utc)
+
+
+def ensure_state_ids_csv(input_csv: str | Path, output_csv: str | Path) -> Path:
+    """Upgrade a legacy prepared event CSV into the preprocessing state-ID format.
+
+    State interpretation remains here in preprocessing. Windowing and statistical
+    modules consume only ``state_id`` values from the resulting file.
+    """
+    source, destination = Path(input_csv), Path(output_csv)
+    if not source.is_file():
+        raise FileNotFoundError(f"Event CSV does not exist: {source}")
+    with source.open("r", encoding="utf-8-sig", newline="") as stream:
+        reader = csv.DictReader(stream)
+        fields = list(reader.fieldnames or ())
+        rows = list(reader)
+    if "state_id" in fields:
+        return source
+    encoder = EventEncoder()
+    has_grouped = {"url_group", "status_category"}.issubset(fields)
+    if "timestamp" not in fields or "method" not in fields:
+        raise ValueError("legacy event CSV requires timestamp and method columns")
+    if not has_grouped and not {"normalized_uri", "status_class"}.issubset(fields):
+        raise ValueError("legacy event CSV requires grouped-state or normalized URI/status columns")
+
+    new_fields = ["state_id", "state_description", *[field for field in fields
+                                                       if field not in {"state_id", "state_description"}]]
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with destination.open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=new_fields, extrasaction="ignore")
+        writer.writeheader()
+        for row in rows:
+            if has_grouped:
+                description = {
+                    "method": (row.get("method") or "unknown").strip().upper() or "unknown",
+                    "url_group": (row.get("url_group") or "unknown").strip() or "unknown",
+                    "status_category": (row.get("status_category") or "unknown").strip() or "unknown",
+                }
+            else:
+                description = encoder.describe(row.get("method"),
+                                                row.get("uri") or row.get("normalized_uri"),
+                                                row.get("status") or row.get("status_class"))
+            row["state_id"] = encoder.state_id(description)
+            row["state_description"] = json.dumps(description, ensure_ascii=False, sort_keys=True)
+            writer.writerow(row)
+    return destination

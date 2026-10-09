@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import csv
 import tempfile
 import pickle
 from datetime import datetime, timezone
@@ -14,7 +15,9 @@ import yaml
 from .aep import AEPDetector
 from .density import InformationScoreDensity
 from .event_encoder import STATE_ENCODING_VERSION
+from .curation import curate_event_csv
 from .markov import MarkovModel
+from .route_preprocessor import ensure_state_ids_csv
 from .windowing import EventWindow, chronological_split, load_windows
 
 
@@ -25,7 +28,19 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "test_dir": "Data/Test",
         "processed_dir": "Data/processed",
     },
-    "window": {"type": "fixed_count", "size": 50, "include_partial": False},
+    "curation": {
+        "enabled": True,
+        "application_routes": [
+            {"method": "GET", "path": "/"},
+            {"method": "GET", "path": "/api/app/compatibility"},
+            {"method": "GET", "path": "/api/tenant/resolve-tenant"},
+            {"method": "GET", "path": "/api/tenant/me"},
+            {"method": "POST", "path": "/api/tenant/login/subdomain-spa"},
+        ],
+        "application_route_names": ["admin.login.show", "admin.login.submit"],
+    },
+    "window": {"type": "ip_session", "size": 50, "include_partial": True,
+                "timeout_seconds": 60, "min_events": 1, "missing_ip": "unknown"},
     "split": {"training": 0.65, "validation": 0.15, "testing": 0.20},
     "markov": {"smoothing": 0.5},
     "aep": {"quantile": 0.99},
@@ -52,14 +67,40 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 
 def _validate_config(config: dict[str, Any]) -> None:
     window = config["window"]
-    if window["type"] not in {"fixed_count", "fixed_time"} or int(window["size"]) <= 0:
-        raise ValueError("window type must be fixed_count/fixed_time and size must be positive")
+    if window["type"] not in {"ip_session", "fixed_count", "fixed_time"} or int(window["size"]) <= 0:
+        raise ValueError("window type must be ip_session/fixed_count/fixed_time and size must be positive")
+    if float(window.get("timeout_seconds", 60)) <= 0 or int(window.get("min_events", 1)) <= 0:
+        raise ValueError("session timeout and minimum event count must be positive")
+    if not str(window.get("missing_ip", "unknown")).strip():
+        raise ValueError("missing_ip group must not be empty")
     if config["detector"]["mode"] not in {"aep", "density", "hybrid"}:
         raise ValueError("detector mode must be aep, density, or hybrid")
 
 
 def _scores(model: MarkovModel, windows: tuple[EventWindow, ...] | list[EventWindow]) -> list[float]:
     return [model.score_sequence(window.states).information_score for window in windows]
+
+
+def _load_state_catalog(event_csv: str | Path,
+                       allowed_ids: set[str] | None = None) -> dict[str, dict[str, str]]:
+    """Read the preprocessing-owned descriptions without interpreting state IDs."""
+    catalog: dict[str, dict[str, str]] = {}
+    with Path(event_csv).open("r", encoding="utf-8-sig", newline="") as stream:
+        for row in csv.DictReader(stream):
+            state_id = row.get("state_id", "")
+            raw_description = row.get("state_description", "{}") or "{}"
+            try:
+                description = json.loads(raw_description)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"invalid state description for state ID {state_id!r}") from exc
+            if not isinstance(description, dict):
+                raise ValueError(f"state description must be an object for state ID {state_id!r}")
+            if state_id and (allowed_ids is None or state_id in allowed_ids):
+                normalized = {str(key): str(value) for key, value in description.items()}
+                prior = catalog.setdefault(state_id, normalized)
+                if prior != normalized:
+                    raise ValueError(f"state ID collision has inconsistent descriptions: {state_id}")
+    return catalog
 
 
 def prepare_log_directory(input_dir: str | Path, output_dir: str | Path) -> dict[str, Any]:
@@ -76,7 +117,8 @@ def prepare_log_directory(input_dir: str | Path, output_dir: str | Path) -> dict
                    for name, item in parsed.items()},
         "preprocessed": {"input_rows": summary.input_rows, "processed_rows": summary.processed_rows,
                          "skipped_rows": summary.skipped_rows,
-                         "skipped_by_reason": summary.skipped_by_reason},
+                         "skipped_by_reason": summary.skipped_by_reason,
+                         "missing_ip_rows": summary.missing_ip_rows},
         "event_csv": str(event_csv),
     }
 
@@ -95,6 +137,14 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     scratch = Path(work_dir) if work_dir else Path(model_dir).parent / "prepared"
     train_data = prepare_log_directory(train_root, scratch / "Train")
     validation_data = prepare_log_directory(validate_root, scratch / "Validate")
+    curation_settings = settings.get("curation", {"enabled": False})
+    if curation_settings.get("enabled", False):
+        train_data["curation"] = curate_event_csv(
+            train_data["event_csv"], scratch / "Train" / "curated", curation_settings)
+        validation_data["curation"] = curate_event_csv(
+            validation_data["event_csv"], scratch / "Validate" / "curated", curation_settings)
+        train_data["event_csv"] = train_data["curation"]["outputs"]["normal"]
+        validation_data["event_csv"] = validation_data["curation"]["outputs"]["normal"]
     train_windows = load_windows(train_data["event_csv"], **settings["window"])
     validation_windows = load_windows(validation_data["event_csv"], **settings["window"])
     if not train_windows or not validation_windows:
@@ -122,14 +172,17 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     destination = Path(model_dir)
     destination.mkdir(parents=True, exist_ok=True)
     model_doc = {
-        "schema_version": 1,
+        "schema_version": 3,
         "state_encoding": {"version": STATE_ENCODING_VERSION,
-                           "definition": ["method", "url_group", "status_category"]},
+                           "id_format": "sha256-canonical-state-description",
+                           "catalog_fields": ["method", "url_group", "status_category"]},
+        "unknown_state_policy": "map_to_reserved_unk_and_report_novelty",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "description": "Fitted statistical anomaly detector (Markov, AEP, information-score KDE)",
         "config": settings,
         "markov": model.to_dict(),
-        "encoder_states": [list(state) for state in model.states],
+        "state_catalog": _load_state_catalog(train_data["event_csv"]),
+        "state_ids": list(model.states),
         "aep_threshold": aep_threshold,
         "density_threshold": density_threshold,
         "dataset_folders": {"train": str(train_root), "validate": str(validate_root)},
@@ -192,7 +245,8 @@ def evaluate_event_csv(event_csv: str | Path, model_dir: str | Path,
                        output_dir: str | Path) -> dict[str, Any]:
     """Evaluate the saved detector on a separate dataset without fitting or tuning."""
     detector = TrainedDetector(model_dir)
-    windows = load_windows(event_csv, **detector.metadata["config"]["window"])
+    prepared_csv = ensure_state_ids_csv(event_csv, Path(output_dir) / "prepared" / "state_events.csv")
+    windows = load_windows(prepared_csv, **detector.metadata["config"]["window"])
     results: dict[str, Any] = {}
     output_root = Path(output_dir)
     output_root.mkdir(parents=True, exist_ok=True)
@@ -230,7 +284,8 @@ def evaluate_event_csv(event_csv: str | Path, model_dir: str | Path,
         with (output_root / f"{mode}.jsonl").open("w", encoding="utf-8") as stream:
             stream.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
     report = {"detector_description": detector.metadata.get("description", "Statistical anomaly detector"),
-              "test_event_csv": str(event_csv), "window_count": len(windows), "comparisons": results}
+              "test_event_csv": str(prepared_csv), "window_count": len(windows),
+              "sequence_settings": detector.metadata["config"]["window"], "comparisons": results}
     (output_root / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
 
@@ -281,7 +336,8 @@ def analyze_uploaded_log(uploaded_path: str | Path, model_dir: str | Path) -> di
                 "preprocessing": {"input_rows": prepared.input_rows,
                                   "processed_rows": prepared.processed_rows,
                                   "skipped_rows": prepared.skipped_rows,
-                                  "skipped_by_reason": prepared.skipped_by_reason},
+                                  "skipped_by_reason": prepared.skipped_by_reason,
+                                  "missing_ip_rows": prepared.missing_ip_rows},
                 "windows": rows}
 
 
@@ -290,7 +346,12 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
     """Fit using training windows and validation-only thresholds, then persist artifacts."""
     settings = config or load_config()
     _validate_config(settings)
-    windows = load_windows(event_csv, **settings["window"])
+    state_csv = ensure_state_ids_csv(event_csv, Path(model_dir).parent / "prepared" / "training_state_events.csv")
+    if settings.get("curation", {}).get("enabled", False):
+        curated = curate_event_csv(state_csv, Path(model_dir).parent / "prepared" / "curated",
+                                   settings["curation"])
+        state_csv = Path(curated["outputs"]["normal"])
+    windows = load_windows(state_csv, **settings["window"])
     split_settings = settings["split"]
     split = chronological_split(windows, split_settings["training"], split_settings["validation"],
                                 split_settings["testing"])
@@ -306,13 +367,16 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
     destination = Path(model_dir)
     destination.mkdir(parents=True, exist_ok=True)
     model_doc = {
-        "schema_version": 1,
+        "schema_version": 3,
         "state_encoding": {"version": STATE_ENCODING_VERSION,
-                           "definition": ["method", "url_group", "status_category"]},
+                           "id_format": "sha256-canonical-state-description",
+                           "catalog_fields": ["method", "url_group", "status_category"]},
+        "unknown_state_policy": "map_to_reserved_unk_and_report_novelty",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "config": settings,
         "markov": model.to_dict(),
-        "encoder_states": [list(state) for state in model.states],
+        "state_catalog": _load_state_catalog(state_csv, set(model.states)),
+        "state_ids": list(model.states),
         "aep_threshold": aep_threshold,
         "density_threshold": density_threshold,
         "split_windows": {"training": len(split.training), "validation": len(split.validation),
@@ -330,7 +394,7 @@ class TrainedDetector:
     def __init__(self, model_dir: str | Path) -> None:
         root = Path(model_dir)
         self.metadata = json.loads((root / "model.json").read_text(encoding="utf-8"))
-        if self.metadata.get("schema_version") != 1:
+        if self.metadata.get("schema_version") != 3:
             raise ValueError("unsupported model bundle schema version")
         if self.metadata.get("state_encoding", {}).get("version") != STATE_ENCODING_VERSION:
             raise ValueError("model uses a different state encoding; rebuild it with the current pipeline")
@@ -360,10 +424,25 @@ class TrainedDetector:
             reasons.append("normalized information score deviates from the learned entropy rate")
         if density_score.anomalous:
             reasons.append("information score lies beyond the validation density threshold")
+        unknown_events = [
+            {"event_index": index, "original_state_id": window.states[index],
+             "state_description": (window.state_descriptions[index]
+                                   if index < len(window.state_descriptions) else {}),
+             "event": window.events[index]}
+            for index in markov_score.unknown_state_indices
+        ]
         return {
             "window_id": window.window_id, "start_time": window.start_time, "end_time": window.end_time,
+            "client_ip": window.client_ip,
             "event_count": len(window.events), "events": list(window.events),
-            "encoded_states": [list(state) for state in window.states],
+            "encoded_states": list(window.states),
+            "state_descriptions": [self.metadata.get("state_catalog", {}).get(state)
+                                   or (window.state_descriptions[index]
+                                       if index < len(window.state_descriptions) else {})
+                                   for index, state in enumerate(window.states)],
+            "scored_states": list(markov_score.scored_states),
+            "novelty_detected": bool(unknown_events), "unknown_state_count": len(unknown_events),
+            "unknown_state_events": unknown_events,
             "log_probability": markov_score.log_probability_bits,
             "initial_probability": markov_score.initial_probability,
             "information_score": markov_score.information_score,
@@ -377,8 +456,8 @@ class TrainedDetector:
             "detector_mode": selected_mode,
             "transition_probabilities": list(markov_score.transition_probabilities),
             "least_probable_transitions": [
-                {"from_state": list(item.from_state) if isinstance(item.from_state, tuple) else item.from_state,
-                 "to_state": list(item.to_state) if isinstance(item.to_state, tuple) else item.to_state,
+                {"from_state": item.from_state,
+                 "to_state": item.to_state,
                  "probability": item.probability}
                 for item in markov_score.least_probable_transitions
             ],
@@ -388,11 +467,12 @@ class TrainedDetector:
 def detect_file(event_csv: str | Path, model_dir: str | Path,
                 output_path: str | Path) -> int:
     detector = TrainedDetector(model_dir)
-    windows = load_windows(event_csv, **detector.metadata["config"]["window"])
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
+    prepared_csv = ensure_state_ids_csv(event_csv, destination.parent / "prepared" / "state_events.csv")
+    windows = load_windows(prepared_csv, **detector.metadata["config"]["window"])
     with destination.open("w", encoding="utf-8") as stream:
         for window in windows:
-            # score_sequence rejects future states instead of mapping them into known states.
+            # Future request states are mapped to the model's reserved UNK symbol.
             stream.write(json.dumps(detector.score(window), ensure_ascii=False) + "\n")
     return len(windows)

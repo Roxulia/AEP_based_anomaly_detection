@@ -28,10 +28,7 @@ app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"],
 
 
 def _monitor() -> LogFolderMonitor:
-    if CONFIG["window"]["type"] != "fixed_count":
-        raise HTTPException(status_code=400, detail="Continuous monitoring currently requires fixed_count windows.")
-    return LogFolderMonitor(WATCH_DIR, MODEL_DIR, ALERT_DB,
-                            int(CONFIG["window"]["size"]))
+    return LogFolderMonitor(WATCH_DIR, MODEL_DIR, ALERT_DB, CONFIG["window"])
 
 
 @app.get("/api/health")
@@ -50,6 +47,7 @@ def summary() -> dict:
         model_summary = {"entropy_rate": document["markov"].get("entropy_rate_bits"),
                          "aep_threshold": document.get("aep_threshold"),
                          "density_threshold": document.get("density_threshold"),
+                         "sequence_settings": document.get("config", {}).get("window", {}),
                          "window_counts": document.get("window_counts", document.get("split_windows", {}))}
     evaluation_path = ROOT / "reports" / "evaluation" / "evaluation.json"
     evaluation = None

@@ -1,12 +1,367 @@
-datasets:
+﻿datasets:
   train_dir: Data/Train
   validate_dir: Data/Validate
   test_dir: Data/Test
   processed_dir: Data/processed
+curation:
+  enabled: true
+  # Exact, reviewed application endpoints. Requests outside this inventory are
+  # written to a review file and excluded from fitting/calibration.
+  application_routes:
+    - {method: '*', path: /admin}
+    - {method: '*', path: /api/app/compatibility}
+    - {method: '*', path: /api/tenant/accounting-days/:id/summary}
+    - {method: '*', path: /api/tenant/accounting-days/current}
+    - {method: '*', path: /api/tenant/accounting-days/schedule}
+    - {method: '*', path: /api/tenant/accounting-days}
+    - {method: '*', path: /api/tenant/accounting/incoming}
+    - {method: '*', path: /api/tenant/accounting/ledger/download}
+    - {method: '*', path: /api/tenant/accounting/ledger}
+    - {method: '*', path: /api/tenant/accounting/movements}
+    - {method: '*', path: /api/tenant/accounting/outgoing}
+    - {method: '*', path: /api/tenant/accounting/overview}
+    - {method: '*', path: /api/tenant/accounting/reporting-exchange-rate-quote}
+    - {method: '*', path: /api/tenant/accounting}
+    - {method: '*', path: /api/tenant/branding/slip-layouts}
+    - {method: '*', path: /api/tenant/business-loans/:id/interest}
+    - {method: '*', path: /api/tenant/business-loans/:id/payments}
+    - {method: '*', path: /api/tenant/business-loans/:id}
+    - {method: '*', path: /api/tenant/business-loans}
+    - {method: '*', path: /api/tenant/capitals/:id}
+    - {method: '*', path: /api/tenant/capitals}
+    - {method: '*', path: /api/tenant/catalog/categories}
+    - {method: '*', path: /api/tenant/catalog/items}
+    - {method: '*', path: /api/tenant/catalog/units/manage}
+    - {method: '*', path: /api/tenant/catalog/units}
+    - {method: '*', path: /api/tenant/collateral-items/:id}
+    - {method: '*', path: /api/tenant/collateral-items}
+    - {method: '*', path: /api/tenant/currencies/:id}
+    - {method: '*', path: /api/tenant/currencies}
+    - {method: '*', path: /api/tenant/customers/:id}
+    - {method: '*', path: /api/tenant/customers}
+    - {method: '*', path: /api/tenant/dashboard/summary}
+    - {method: '*', path: /api/tenant/debts/:id/interest}
+    - {method: '*', path: /api/tenant/debts/:id/payments}
+    - {method: '*', path: /api/tenant/debts/:id}
+    - {method: '*', path: /api/tenant/debts}
+    - {method: '*', path: /api/tenant/exchange-pairs/:id}
+    - {method: '*', path: /api/tenant/exchange-pairs}
+    - {method: '*', path: /api/tenant/exchange-rates/:id}
+    - {method: '*', path: /api/tenant/exchange-rates/daily}
+    - {method: '*', path: /api/tenant/exchange-rates/resolve}
+    - {method: '*', path: /api/tenant/exchange-rates/state}
+    - {method: '*', path: /api/tenant/exchange-rates/trend}
+    - {method: '*', path: /api/tenant/exchange-rates}
+    - {method: '*', path: /api/tenant/expense-types/paginated}
+    - {method: '*', path: /api/tenant/expense-types}
+    - {method: '*', path: /api/tenant/expenses/:id}
+    - {method: '*', path: /api/tenant/expenses}
+    - {method: '*', path: /api/tenant/financial-account-types}
+    - {method: '*', path: /api/tenant/financial-accounts/:id/transactions}
+    - {method: '*', path: /api/tenant/financial-accounts/:id}
+    - {method: '*', path: /api/tenant/financial-accounts/transfers}
+    - {method: '*', path: /api/tenant/financial-accounts}
+    - {method: '*', path: /api/tenant/financial-units}
+    - {method: '*', path: /api/tenant/interest-payments/:id/calculate}
+    - {method: '*', path: /api/tenant/interest-payments}
+    - {method: '*', path: /api/tenant/interest-types/paginated}
+    - {method: '*', path: /api/tenant/interest-types}
+    - {method: '*', path: /api/tenant/inventory/items/:id/movements}
+    - {method: '*', path: /api/tenant/inventory/items/:id}
+    - {method: '*', path: /api/tenant/inventory/items}
+    - {method: '*', path: /api/tenant/inventory/locations}
+    - {method: '*', path: /api/tenant/inventory/units}
+    - {method: '*', path: /api/tenant/item-category-types/paginated}
+    - {method: '*', path: /api/tenant/item-category-types}
+    - {method: '*', path: /api/tenant/lenders/:id}
+    - {method: '*', path: /api/tenant/lenders}
+    - {method: '*', path: /api/tenant/loan-contract-slips/:id/document/download}
+    - {method: '*', path: /api/tenant/loan-contract-slips/:id/document/preview}
+    - {method: '*', path: /api/tenant/loan-contract-slips/:id}
+    - {method: '*', path: /api/tenant/loan-contract-slips}
+    - {method: '*', path: /api/tenant/material-types/paginated}
+    - {method: '*', path: /api/tenant/material-types}
+    - {method: '*', path: /api/tenant/me}
+    - {method: '*', path: /api/tenant/notifications}
+    - {method: '*', path: /api/tenant/ownership/expired-collateral}
+    - {method: '*', path: /api/tenant/ownership/inventory-options}
+    - {method: '*', path: /api/tenant/ownership/items/:id/movements}
+    - {method: '*', path: /api/tenant/ownership/items/:id}
+    - {method: '*', path: /api/tenant/ownership/items}
+    - {method: '*', path: /api/tenant/purchasing/orders/:id/payments}
+    - {method: '*', path: /api/tenant/purchasing/orders/:id/receipts}
+    - {method: '*', path: /api/tenant/purchasing/orders/:id/returns}
+    - {method: '*', path: /api/tenant/purchasing/orders/:id}
+    - {method: '*', path: /api/tenant/purchasing/orders}
+    - {method: '*', path: /api/tenant/purchasing/payables}
+    - {method: '*', path: /api/tenant/purchasing/suppliers/:id}
+    - {method: '*', path: /api/tenant/purchasing/suppliers}
+    - {method: '*', path: /api/tenant/redemption-records/:id}
+    - {method: '*', path: /api/tenant/redemptions/:id/calculate}
+    - {method: '*', path: /api/tenant/redemptions}
+    - {method: '*', path: /api/tenant/resolve-tenant}
+    - {method: '*', path: /api/tenant/sales/orders/:id}
+    - {method: '*', path: /api/tenant/sales/orders}
+    - {method: '*', path: /api/tenant/sales/receivables/:id}
+    - {method: '*', path: /api/tenant/sales/receivables}
+    - {method: '*', path: /api/tenant/scheduled-expenses/:id/occurrences}
+    - {method: '*', path: /api/tenant/scheduled-expenses/:id}
+    - {method: '*', path: /api/tenant/scheduled-expenses}
+    - {method: '*', path: /api/tenant/settings/contact}
+    - {method: '*', path: /api/tenant/settings/currencies}
+    - {method: '*', path: /api/tenant/settings/default-data}
+    - {method: '*', path: /api/tenant/settings/finance}
+    - {method: '*', path: /api/tenant/settings/interest-process}
+    - {method: '*', path: /api/tenant/settings/loan-slip-creation}
+    - {method: '*', path: /api/tenant/settings/reporting-currency-rate-requirements}
+    - {method: '*', path: /api/tenant/settings/tenant}
+    - {method: '*', path: /api/tenant/settings/timezone-options}
+    - {method: '*', path: /api/tenant/settings/timezone}
+    - {method: '*', path: /api/tenant/settings}
+    - {method: '*', path: /api/tenant/slip-documents/config}
+    - {method: '*', path: /api/tenant/user-roles}
+    - {method: '*', path: /api/tenant/users/:id}
+    - {method: '*', path: /api/tenant/users}
+    - {method: '*', path: /api/user}
+    - {method: '*', path: /broadcasting/auth}
+    - {method: '*', path: /platform-login}
+    - {method: '*', path: /up}
+    - {method: '*', path: /}
+    - {method: DELETE, path: /api/tenant/business-loans/:id}
+    - {method: DELETE, path: /api/tenant/capitals/:id}
+    - {method: DELETE, path: /api/tenant/collateral-items/:id}
+    - {method: DELETE, path: /api/tenant/currencies/:id}
+    - {method: DELETE, path: /api/tenant/customers/:id}
+    - {method: DELETE, path: /api/tenant/debts/:id}
+    - {method: DELETE, path: /api/tenant/exchange-pairs/:id}
+    - {method: DELETE, path: /api/tenant/expense-types/:id}
+    - {method: DELETE, path: /api/tenant/expenses/:id}
+    - {method: DELETE, path: /api/tenant/financial-account-types/:id}
+    - {method: DELETE, path: /api/tenant/financial-accounts/:id}
+    - {method: DELETE, path: /api/tenant/interest-types/:id}
+    - {method: DELETE, path: /api/tenant/item-category-types/:id}
+    - {method: DELETE, path: /api/tenant/lenders/:id}
+    - {method: DELETE, path: /api/tenant/loan-contract-slips/:id}
+    - {method: DELETE, path: /api/tenant/material-types/:id}
+    - {method: DELETE, path: /api/tenant/scheduled-expenses/:id}
+    - {method: DELETE, path: /api/tenant/users/:id}
+    - {method: POST, path: /api/license/validate}
+    - {method: POST, path: /api/telegram/webhook}
+    - {method: POST, path: /api/tenant/accounting-days/close}
+    - {method: POST, path: /api/tenant/accounting-days/open}
+    - {method: POST, path: /api/tenant/business-loans/:id/compound-interest}
+    - {method: POST, path: /api/tenant/business-loans/:id/payments}
+    - {method: POST, path: /api/tenant/business-loans}
+    - {method: POST, path: /api/tenant/capitals}
+    - {method: POST, path: /api/tenant/catalog/categories}
+    - {method: POST, path: /api/tenant/catalog/items}
+    - {method: POST, path: /api/tenant/catalog/units}
+    - {method: POST, path: /api/tenant/currencies}
+    - {method: POST, path: /api/tenant/customers}
+    - {method: POST, path: /api/tenant/debts/:id/compound-interest}
+    - {method: POST, path: /api/tenant/debts/:id/paid}
+    - {method: POST, path: /api/tenant/debts}
+    - {method: POST, path: /api/tenant/exchange-pairs}
+    - {method: POST, path: /api/tenant/exchange-rates/:id/correct}
+    - {method: POST, path: /api/tenant/exchange-rates/:id/void}
+    - {method: POST, path: /api/tenant/exchange-rates}
+    - {method: POST, path: /api/tenant/expense-types}
+    - {method: POST, path: /api/tenant/expenses}
+    - {method: POST, path: /api/tenant/financial-account-types}
+    - {method: POST, path: /api/tenant/financial-accounts/transfers}
+    - {method: POST, path: /api/tenant/financial-accounts}
+    - {method: POST, path: /api/tenant/interest-payments/:id/pay}
+    - {method: POST, path: /api/tenant/interest-types}
+    - {method: POST, path: /api/tenant/inventory/adjust}
+    - {method: POST, path: /api/tenant/inventory/issue}
+    - {method: POST, path: /api/tenant/inventory/locations}
+    - {method: POST, path: /api/tenant/inventory/move}
+    - {method: POST, path: /api/tenant/inventory/receive}
+    - {method: POST, path: /api/tenant/item-category-types}
+    - {method: POST, path: /api/tenant/lenders}
+    - {method: POST, path: /api/tenant/loan-contract-slips/:id/compound-interest}
+    - {method: POST, path: /api/tenant/loan-contract-slips/:id/partial-principal}
+    - {method: POST, path: /api/tenant/loan-contract-slips}
+    - {method: POST, path: /api/tenant/login/public-spa}
+    - {method: POST, path: /api/tenant/login/subdomain-spa}
+    - {method: POST, path: /api/tenant/logout}
+    - {method: POST, path: /api/tenant/material-types}
+    - {method: POST, path: /api/tenant/notifications/:id/read}
+    - {method: POST, path: /api/tenant/notifications/read-all}
+    - {method: POST, path: /api/tenant/online-sync}
+    - {method: POST, path: /api/tenant/ownership/acquisitions}
+    - {method: POST, path: /api/tenant/ownership/expired-collateral/:id/transfer}
+    - {method: POST, path: /api/tenant/purchasing/orders/:id/:id}
+    - {method: POST, path: /api/tenant/purchasing/orders/:id/payments}
+    - {method: POST, path: /api/tenant/purchasing/orders/:id/receipts}
+    - {method: POST, path: /api/tenant/purchasing/orders/:id/returns}
+    - {method: POST, path: /api/tenant/purchasing/orders}
+    - {method: POST, path: /api/tenant/purchasing/payables/:id/payments}
+    - {method: POST, path: /api/tenant/purchasing/payments/:id/refunds}
+    - {method: POST, path: /api/tenant/purchasing/suppliers}
+    - {method: POST, path: /api/tenant/redemptions}
+    - {method: POST, path: /api/tenant/sales/orders/:id/:id}
+    - {method: POST, path: /api/tenant/sales/orders/:id/deliveries}
+    - {method: POST, path: /api/tenant/sales/orders/:id/payments}
+    - {method: POST, path: /api/tenant/sales/orders}
+    - {method: POST, path: /api/tenant/sales/receivables/:id/payments}
+    - {method: POST, path: /api/tenant/scheduled-expenses/:id/pause}
+    - {method: POST, path: /api/tenant/scheduled-expenses/:id/resume}
+    - {method: POST, path: /api/tenant/scheduled-expenses}
+    - {method: POST, path: /api/tenant/settings/reporting-currency-rate-requirements}
+    - {method: POST, path: /api/tenant/settings/reporting-currency-recalculation/abort}
+    - {method: POST, path: /api/tenant/sso/consume}
+    - {method: POST, path: /api/tenant/users}
+    - {method: PUT, path: /api/tenant/accounting-days/schedule}
+    - {method: PUT, path: /api/tenant/branding/slip-layouts}
+    - {method: PUT, path: /api/tenant/business-loans/:id/compound-schedule}
+    - {method: PUT, path: /api/tenant/business-loans/:id}
+    - {method: PUT, path: /api/tenant/capitals/:id}
+    - {method: PUT, path: /api/tenant/catalog/categories/:id}
+    - {method: PUT, path: /api/tenant/catalog/items/:id}
+    - {method: PUT, path: /api/tenant/catalog/units/:id}
+    - {method: PUT, path: /api/tenant/collateral-items/:id}
+    - {method: PUT, path: /api/tenant/currencies/:id}
+    - {method: PUT, path: /api/tenant/customers/:id}
+    - {method: PUT, path: /api/tenant/debts/:id/compound-schedule}
+    - {method: PUT, path: /api/tenant/debts/:id}
+    - {method: PUT, path: /api/tenant/exchange-pairs/:id}
+    - {method: PUT, path: /api/tenant/expenses/:id}
+    - {method: PUT, path: /api/tenant/financial-account-types/:id}
+    - {method: PUT, path: /api/tenant/financial-accounts/:id}
+    - {method: PUT, path: /api/tenant/inventory/locations/:id}
+    - {method: PUT, path: /api/tenant/lenders/:id}
+    - {method: PUT, path: /api/tenant/loan-contract-slips/:id/compound-schedule}
+    - {method: PUT, path: /api/tenant/me/change-language}
+    - {method: PUT, path: /api/tenant/me/change-password}
+    - {method: PUT, path: /api/tenant/purchasing/orders/:id}
+    - {method: PUT, path: /api/tenant/purchasing/suppliers/:id}
+    - {method: PUT, path: /api/tenant/scheduled-expenses/:id}
+    - {method: PUT, path: /api/tenant/settings/branding}
+    - {method: PUT, path: /api/tenant/settings/business-loan-payment-policy}
+    - {method: PUT, path: /api/tenant/settings/contact}
+    - {method: PUT, path: /api/tenant/settings/currencies}
+    - {method: PUT, path: /api/tenant/settings/debt-payment-policy}
+    - {method: PUT, path: /api/tenant/settings/default-user-password}
+    - {method: PUT, path: /api/tenant/settings/interest-process}
+    - {method: PUT, path: /api/tenant/settings/loan-slip-creation}
+    - {method: PUT, path: /api/tenant/settings/timezone}
+    - {method: PUT, path: /api/tenant/settings}
+    - {method: PUT, path: /api/tenant/users/:id/financial-account-assignments}
+    - {method: PUT, path: /api/tenant/users/:id/permissions}
+    - {method: PUT, path: /api/tenant/users/:id/reset-to-defaultpassword}
+    - {method: PUT, path: /api/tenant/users/:id}
+  application_route_names:
+    - admin.billing.index
+    - admin.catalog-units.index
+    - admin.catalog-units.store
+    - admin.catalog-units.update
+    - admin.currencies.destroy
+    - admin.currencies.index
+    - admin.currencies.store
+    - admin.currencies.update
+    - admin.dashboard
+    - admin.exchange-pairs.destroy
+    - admin.exchange-pairs.index
+    - admin.exchange-pairs.store
+    - admin.exchange-pairs.update
+    - admin.exchange-rates.correct
+    - admin.exchange-rates.index
+    - admin.exchange-rates.store
+    - admin.exchange-rates.void
+    - admin.issued-tickets.index
+    - admin.issued-tickets.messages.store
+    - admin.issued-tickets.open
+    - admin.issued-tickets.resolve
+    - admin.issued-tickets.show
+    - admin.issued-tickets.status.update
+    - admin.login.show
+    - admin.login.submit
+    - admin.logout
+    - admin.package-flags.feature-assignment.update
+    - admin.package-flags.features.store
+    - admin.package-flags.features.update
+    - admin.package-flags.index
+    - admin.package-flags.plans.update
+    - admin.package-flags.update
+    - admin.password.change
+    - admin.password.update
+    - admin.payment
+    - admin.payment-qrs.activate
+    - admin.payment-qrs.image
+    - admin.payment-qrs.index
+    - admin.payment-qrs.store
+    - admin.payment-requests.accept
+    - admin.payment-requests.index
+    - admin.payment-requests.reject
+    - admin.payment-requests.show
+    - admin.plans.categories.destroy
+    - admin.plans.categories.store
+    - admin.plans.categories.update
+    - admin.plans.destroy
+    - admin.plans.index
+    - admin.plans.store
+    - admin.plans.update
+    - admin.platform-users.create
+    - admin.platform-users.destroy
+    - admin.platform-users.edit
+    - admin.platform-users.index
+    - admin.platform-users.reset-password
+    - admin.platform-users.store
+    - admin.platform-users.update
+    - admin.tenants.create
+    - admin.tenants.index
+    - admin.tenants.license.extend
+    - admin.tenants.plan.update
+    - admin.tenants.store
+    - api.tenant.logo.show
+    - locale.set
+    - platform.billing.index
+    - platform.billing.payment.submit
+    - platform.customer-service.create
+    - platform.customer-service.index
+    - platform.customer-service.messages.store
+    - platform.customer-service.show
+    - platform.customer-service.store
+    - platform.dashboard
+    - platform.language.change
+    - platform.login.show
+    - platform.login.submit
+    - platform.logout
+    - platform.password.cancel
+    - platform.password.change
+    - platform.password.forgot
+    - platform.password.reset
+    - platform.password.send-code
+    - platform.password.verify-code
+    - platform.payment-qrs.image
+    - platform.register.send-code
+    - platform.register.show
+    - platform.register.submit
+    - platform.register.verify
+    - platform.register.verify-code
+    - platform.settings
+    - platform.tenants.accounting-day-schedule.update
+    - platform.tenants.create
+    - platform.tenants.edit
+    - platform.tenants.extension-request
+    - platform.tenants.index
+    - platform.tenants.open-app
+    - platform.tenants.store
+    - platform.tenants.update
+    - platform.tenants.upgrade-request
+    - sanctum.csrf-cookie
+    - seo.robots
+    - seo.sitemap
+    - storage.local
+    - storage.local.upload
 window:
-  type: fixed_count
+  type: ip_session
   size: 50
-  include_partial: false
+  include_partial: true
+  timeout_seconds: 60
+  min_events: 3
+  missing_ip: unknown
 markov:
   smoothing: 0.5
 aep:
@@ -17,3 +372,6 @@ density:
   quantile: 0.99
 detector:
   mode: hybrid
+
+
+

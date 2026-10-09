@@ -3,11 +3,12 @@
 from .log_parser import LogParser, ParseStats
 from .aep import AEPDetector, AEPScore
 from .density import DensityScore, InformationScoreDensity
-from .event_encoder import EventEncoder, EventState
+from .event_encoder import EventEncoder
+from .state_types import EventState, StateDescription, StateId, StateSequence
 from .route_grouper import RouteGrouper
 from .markov import MarkovModel, MarkovSequenceScore, TransitionDetail
 from .route_normalizer import RouteNormalizer
-from .route_preprocessor import PreprocessingSummary, RoutePreprocessor
+from .route_preprocessor import PreprocessingSummary, RoutePreprocessor, ensure_state_ids_csv
 from .pipeline import (TrainedDetector, analyze_uploaded_log, detect_file, evaluate_directory,
                        evaluate_event_csv, load_config, prepare_log_directory,
                        train_from_directories, train_model)
@@ -21,6 +22,9 @@ __all__ = [
     "DatasetSplit",
     "EventEncoder",
     "EventState",
+    "StateDescription",
+    "StateId",
+    "StateSequence",
     "RouteGrouper",
     "EventWindow",
     "InformationScoreDensity",
@@ -39,6 +43,7 @@ __all__ = [
     "detect_file",
     "evaluate_directory",
     "evaluate_event_csv",
+    "ensure_state_ids_csv",
     "load_config",
     "load_windows",
     "prepare_log_directory",

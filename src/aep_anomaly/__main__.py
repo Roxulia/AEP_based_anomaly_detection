@@ -8,8 +8,9 @@ import sys
 import time
 
 from .log_parser import LogParser
-from .pipeline import (detect_file, evaluate_directory, load_config, train_from_directories,
-                       train_model)
+from .pipeline import (detect_file, evaluate_directory, load_config, prepare_log_directory,
+                       train_from_directories, train_model)
+from .curation import curate_event_csv
 from .monitor import LogFolderMonitor
 
 
@@ -23,6 +24,10 @@ def main() -> int:
     parse = commands.add_parser("parse", help="Parse raw logs into CSV files.")
     parse.add_argument("--input-dir", type=Path, default=project_root / "Data" / "logs")
     parse.add_argument("--output-dir", type=Path, default=project_root / "Data" / "processed")
+    curate = commands.add_parser("curate", help="Prepare logs and split allowlisted application routes from review routes.")
+    curate.add_argument("--input-dir", type=Path, default=project_root / "Data" / "Train")
+    curate.add_argument("--output-dir", type=Path, default=project_root / "Data" / "processed" / "Train")
+    curate.add_argument("--config", type=Path, default=project_root / "config" / "default.yaml")
     train = commands.add_parser("train", help="Train and save a detector from preprocessed events.")
     train.add_argument("--input-csv", type=Path, required=True)
     train.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
@@ -51,7 +56,7 @@ def main() -> int:
     monitor.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
     monitor.add_argument("--database", type=Path, default=project_root / "Data" / "alerts.sqlite3")
     monitor.add_argument("--interval", type=float, default=5.0)
-    monitor.add_argument("--window-size", type=int, default=50)
+    monitor.add_argument("--config", type=Path, default=project_root / "config" / "default.yaml")
     args = parser.parse_args(arguments)
 
     if args.command == "parse":
@@ -59,6 +64,13 @@ def main() -> int:
         for log_type, stats in summaries.items():
             print(f"{log_type}: files={stats.files}, parsed={stats.parsed_rows}, "
                   f"malformed={stats.malformed_rows}, output={stats.output_path}")
+    elif args.command == "curate":
+        config = load_config(args.config)
+        prepared = prepare_log_directory(args.input_dir, args.output_dir)
+        result = curate_event_csv(prepared["event_csv"], args.output_dir / "curated",
+                                  config.get("curation", {}))
+        counts = result.get("counts", {})
+        print(f"curated {sum(counts.values())} events: {counts}; manifest: {result.get('manifest_path')}")
     elif args.command == "train":
         summary = train_model(args.input_csv, args.model_dir, load_config(args.config))
         print(f"trained model: {summary['model_dir']} ({summary['training']} train, "
@@ -83,7 +95,8 @@ def main() -> int:
     elif args.command == "monitor":
         if args.interval <= 0:
             parser.error("--interval must be greater than zero")
-        service = LogFolderMonitor(args.watch_dir, args.model_dir, args.database, args.window_size)
+        service = LogFolderMonitor(args.watch_dir, args.model_dir, args.database,
+                                   load_config(args.config)["window"])
         while True:
             try:
                 print(service.scan_once())
