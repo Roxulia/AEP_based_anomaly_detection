@@ -18,7 +18,7 @@ from .event_encoder import STATE_ENCODING_VERSION
 from .curation import curate_event_csv
 from .markov import MarkovModel
 from .route_preprocessor import ensure_state_ids_csv
-from .windowing import EventWindow, chronological_split, load_windows
+from .windowing import EventWindow, load_windows
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
@@ -81,6 +81,49 @@ def _scores(model: MarkovModel, windows: tuple[EventWindow, ...] | list[EventWin
     return [model.score_sequence(window.states).information_score for window in windows]
 
 
+def _split_event_csv(event_csv: str | Path, output_dir: str | Path,
+                     training_ratio: float, validation_ratio: float,
+                     testing_ratio: float) -> tuple[Path, Path, Path]:
+    """Split preprocessed events chronologically before training-only curation/windowing."""
+    ratios = (float(training_ratio), float(validation_ratio), float(testing_ratio))
+    if any(value <= 0 for value in ratios) or abs(sum(ratios) - 1.0) > 1e-9:
+        raise ValueError("split ratios must be positive and sum to 1")
+
+    with Path(event_csv).open("r", encoding="utf-8-sig", newline="") as stream:
+        reader = csv.DictReader(stream)
+        fields = list(reader.fieldnames or ())
+        if not fields:
+            raise ValueError(f"event CSV has no header: {event_csv}")
+        records: list[tuple[datetime, int, dict[str, str]]] = []
+        for row_number, row in enumerate(reader):
+            raw_timestamp = (row.get("timestamp") or "").strip()
+            try:
+                timestamp = datetime.fromisoformat(raw_timestamp.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise ValueError(f"invalid timestamp at CSV row {row_number + 2}: {raw_timestamp!r}") from exc
+            if timestamp.tzinfo is None:
+                timestamp = timestamp.replace(tzinfo=timezone.utc)
+            records.append((timestamp.astimezone(timezone.utc), row_number, row))
+
+    records.sort(key=lambda item: (item[0], item[1]))
+    count = len(records)
+    training_end = int(count * ratios[0])
+    validation_end = training_end + int(count * ratios[1])
+    if training_end < 1 or validation_end <= training_end or validation_end >= count:
+        raise ValueError("not enough events for non-empty training, validation, and testing splits")
+
+    output_root = Path(output_dir)
+    output_root.mkdir(parents=True, exist_ok=True)
+    boundaries = (0, training_end, validation_end, count)
+    outputs = tuple(output_root / f"{name}_events.csv" for name in ("training", "validation", "testing"))
+    for index, output in enumerate(outputs):
+        with output.open("w", encoding="utf-8-sig", newline="") as stream:
+            writer = csv.DictWriter(stream, fieldnames=fields)
+            writer.writeheader()
+            writer.writerows(record[2] for record in records[boundaries[index]:boundaries[index + 1]])
+    return outputs
+
+
 def _load_state_catalog(event_csv: str | Path,
                        allowed_ids: set[str] | None = None) -> dict[str, dict[str, str]]:
     """Read the preprocessing-owned descriptions without interpreting state IDs."""
@@ -141,10 +184,7 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     if curation_settings.get("enabled", False):
         train_data["curation"] = curate_event_csv(
             train_data["event_csv"], scratch / "Train" / "curated", curation_settings)
-        validation_data["curation"] = curate_event_csv(
-            validation_data["event_csv"], scratch / "Validate" / "curated", curation_settings)
         train_data["event_csv"] = train_data["curation"]["outputs"]["normal"]
-        validation_data["event_csv"] = validation_data["curation"]["outputs"]["normal"]
     train_windows = load_windows(train_data["event_csv"], **settings["window"])
     validation_windows = load_windows(validation_data["event_csv"], **settings["window"])
     if not train_windows or not validation_windows:
@@ -343,23 +383,31 @@ def analyze_uploaded_log(uploaded_path: str | Path, model_dir: str | Path) -> di
 
 def train_model(event_csv: str | Path, model_dir: str | Path,
                 config: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Fit using training windows and validation-only thresholds, then persist artifacts."""
+    """Chronologically split events, curate Train only, then fit and persist artifacts."""
     settings = config or load_config()
     _validate_config(settings)
     state_csv = ensure_state_ids_csv(event_csv, Path(model_dir).parent / "prepared" / "training_state_events.csv")
-    if settings.get("curation", {}).get("enabled", False):
-        curated = curate_event_csv(state_csv, Path(model_dir).parent / "prepared" / "curated",
-                                   settings["curation"])
-        state_csv = Path(curated["outputs"]["normal"])
-    windows = load_windows(state_csv, **settings["window"])
     split_settings = settings["split"]
-    split = chronological_split(windows, split_settings["training"], split_settings["validation"],
-                                split_settings["testing"])
-    model = MarkovModel(smoothing=float(settings["markov"]["smoothing"])).fit(
-        window.states for window in split.training
+    partitions = _split_event_csv(
+        state_csv,
+        Path(model_dir).parent / "prepared" / "event_partitions",
+        split_settings["training"], split_settings["validation"], split_settings["testing"],
     )
-    train_scores = _scores(model, split.training)
-    validation_scores = _scores(model, split.validation)
+    train_csv, validation_csv, testing_csv = partitions
+    if settings.get("curation", {}).get("enabled", False):
+        curated = curate_event_csv(train_csv, Path(model_dir).parent / "prepared" / "curated",
+                                   settings["curation"])
+        train_csv = Path(curated["outputs"]["normal"])
+    training_windows = load_windows(train_csv, **settings["window"])
+    validation_windows = load_windows(validation_csv, **settings["window"])
+    testing_windows = load_windows(testing_csv, **settings["window"])
+    if not training_windows or not validation_windows or not testing_windows:
+        raise ValueError("Train, Validate, and Test must each contain enough valid requests to form windows")
+    model = MarkovModel(smoothing=float(settings["markov"]["smoothing"])).fit(
+        window.states for window in training_windows
+    )
+    train_scores = _scores(model, training_windows)
+    validation_scores = _scores(model, validation_windows)
     aep = AEPDetector(quantile=float(settings["aep"]["quantile"]))
     aep_threshold = aep.fit_threshold(validation_scores, model.entropy_rate_bits)
     density = InformationScoreDensity(**settings["density"]).fit(train_scores)
@@ -375,17 +423,19 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "config": settings,
         "markov": model.to_dict(),
-        "state_catalog": _load_state_catalog(state_csv, set(model.states)),
+        "state_catalog": _load_state_catalog(train_csv, set(model.states)),
         "state_ids": list(model.states),
         "aep_threshold": aep_threshold,
         "density_threshold": density_threshold,
-        "split_windows": {"training": len(split.training), "validation": len(split.validation),
-                          "testing": len(split.testing)},
+        "split_windows": {"training": len(training_windows), "validation": len(validation_windows),
+                          "testing": len(testing_windows)},
     }
     (destination / "model.json").write_text(json.dumps(model_doc, indent=2), encoding="utf-8")
     with (destination / "density.pkl").open("wb") as stream:
         pickle.dump(density, stream, protocol=pickle.HIGHEST_PROTOCOL)
-    return {"model_dir": str(destination), "windows": len(windows), **model_doc["split_windows"]}
+    return {"model_dir": str(destination),
+            "windows": len(training_windows) + len(validation_windows) + len(testing_windows),
+            **model_doc["split_windows"]}
 
 
 class TrainedDetector:
