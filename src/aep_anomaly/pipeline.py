@@ -359,17 +359,73 @@ def analyze_uploaded_log(uploaded_path: str | Path, model_dir: str | Path) -> di
         prepared = RoutePreprocessor().process_csv(root / "parsed" / "routes.csv", event_csv)
         detector = TrainedDetector(model_dir)
         windows = load_windows(event_csv, **detector.metadata["config"]["window"])
-        rows = []
-        for window in windows:
-            try:
-                rows.append(detector.score(window))
-            except ValueError as exc:
-                if "not observed during fit" not in str(exc):
-                    raise
-                rows.append({"window_id": window.window_id, "start_time": window.start_time,
-                             "end_time": window.end_time, "scorable": False,
-                             "final_anomalous": None, "unscorable_reason": str(exc)})
+        modes = ("aep", "density", "hybrid")
+        results_by_mode: dict[str, list[dict[str, Any]]] = {mode: [] for mode in modes}
+        for mode in modes:
+            for window in windows:
+                try:
+                    results_by_mode[mode].append(detector.score(window, mode=mode))
+                except ValueError as exc:
+                    if "not observed during fit" not in str(exc):
+                        raise
+                    results_by_mode[mode].append({
+                        "window_id": window.window_id, "start_time": window.start_time,
+                        "end_time": window.end_time, "event_count": len(window.events),
+                        "client_ip": window.client_ip, "events": list(window.events),
+                        "state_descriptions": list(window.state_descriptions),
+                        "scorable": False, "final_anomalous": None,
+                        "anomaly_reasons": [], "unscorable_reason": str(exc),
+                    })
+        comparisons: dict[str, dict[str, Any]] = {}
+        labels = [_label_value(window) for window in windows]
+        for mode, rows in results_by_mode.items():
+            scorable = [(label, row) for label, row in zip(labels, rows)
+                        if label is not None and row.get("scorable", True)]
+            if scorable:
+                metric_scores = []
+                for _, row in scorable:
+                    if mode == "density":
+                        metric_scores.append(row["density_score"])
+                    elif mode == "aep":
+                        metric_scores.append(row["aep_deviation"])
+                    else:
+                        metric_scores.append(max(
+                            row["aep_deviation"] / max(detector.aep.threshold or 0.0, 1e-12),
+                            row["density_score"] / max(detector.density.threshold or 0.0, 1e-12),
+                        ))
+                metrics = _binary_metrics(
+                    [item[0] for item in scorable], metric_scores,
+                    [bool(item[1]["final_anomalous"]) for item in scorable],
+                )
+            else:
+                metrics = {"available": False,
+                           "reason": "No usable ground-truth labels in uploaded log windows."}
+            comparisons[mode] = {
+                "windows": len(rows),
+                "scorable_windows": sum(row.get("scorable", True) for row in rows),
+                "unscorable_windows": sum(not row.get("scorable", True) for row in rows),
+                "anomalous_windows": sum(row.get("final_anomalous") is True for row in rows),
+                "metrics": metrics,
+            }
+        anomalies_by_mode = {
+            mode: [{
+                "window_id": row["window_id"],
+                "start_time": row.get("start_time"),
+                "end_time": row.get("end_time"),
+                "client_ip": row.get("client_ip"),
+                "event_count": row.get("event_count", len(row.get("events", []))),
+                "information_score": row.get("information_score"),
+                "entropy_rate": row.get("entropy_rate"),
+                "aep_deviation": row.get("aep_deviation"),
+                "density_score": row.get("density_score"),
+                "anomaly_reasons": row.get("anomaly_reasons", []),
+                "activities": row.get("events", []),
+            } for row in rows if row.get("final_anomalous") is True]
+            for mode, rows in results_by_mode.items()
+        }
+        selected_mode = detector.mode
         return {"filename": source.name,
+                "detector_mode": selected_mode,
                 "parse": {name: {"files": stat.files, "parsed_rows": stat.parsed_rows,
                                  "malformed_rows": stat.malformed_rows}
                           for name, stat in parsed.items()},
@@ -378,7 +434,9 @@ def analyze_uploaded_log(uploaded_path: str | Path, model_dir: str | Path) -> di
                                   "skipped_rows": prepared.skipped_rows,
                                   "skipped_by_reason": prepared.skipped_by_reason,
                                   "missing_ip_rows": prepared.missing_ip_rows},
-                "windows": rows}
+                "window_count": len(windows), "comparisons": comparisons,
+                "results_by_mode": results_by_mode, "anomalies_by_mode": anomalies_by_mode,
+                "windows": results_by_mode[selected_mode]}
 
 
 def train_model(event_csv: str | Path, model_dir: str | Path,
@@ -470,9 +528,9 @@ class TrainedDetector:
         else:
             final = aep_score.anomalous or bool(density_score.anomalous)
         reasons = []
-        if aep_score.anomalous:
+        if selected_mode in {"aep", "hybrid"} and aep_score.anomalous:
             reasons.append("normalized information score deviates from the learned entropy rate")
-        if density_score.anomalous:
+        if selected_mode in {"density", "hybrid"} and density_score.anomalous:
             reasons.append("information score lies beyond the validation density threshold")
         unknown_events = [
             {"event_index": index, "original_state_id": window.states[index],
