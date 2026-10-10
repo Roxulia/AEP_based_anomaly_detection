@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import csv
+import os
 import tempfile
 import pickle
 from datetime import datetime, timezone
@@ -14,8 +15,8 @@ import yaml
 
 from .aep import AEPDetector
 from .density import InformationScoreDensity
-from .event_encoder import STATE_ENCODING_VERSION
-from .curation import curate_event_csv
+from .event_encoder import EventEncoder, STATE_ENCODING_VERSION
+from .curation import curate_event_csv, exclude_event_csv
 from .markov import MarkovModel
 from .route_preprocessor import ensure_state_ids_csv
 from .windowing import EventWindow, load_windows
@@ -30,6 +31,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "curation": {
         "enabled": True,
+        "exclude_paths": ["/api/app/compatibility"],
+        "exclude_route_names": [],
         "application_routes": [
             {"method": "GET", "path": "/"},
             {"method": "GET", "path": "/api/app/compatibility"},
@@ -41,6 +44,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "window": {"type": "ip_session", "size": 50, "include_partial": True,
                 "timeout_seconds": 60, "min_events": 1, "missing_ip": "unknown"},
+    "state": {"fields": ["method", "url_group", "status_category"]},
     "split": {"training": 0.65, "validation": 0.15, "testing": 0.20},
     "markov": {"smoothing": 0.5},
     "aep": {"quantile": 0.99},
@@ -66,6 +70,11 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 
 
 def _validate_config(config: dict[str, Any]) -> None:
+    fields = config.get("state", {}).get("fields")
+    valid_fields = EventEncoder.VALID_FIELDS
+    if not isinstance(fields, list) or not fields or len(set(fields)) != len(fields) or any(
+            field not in valid_fields for field in fields):
+        raise ValueError(f"state.fields must be a non-empty unique list chosen from {valid_fields}")
     window = config["window"]
     if window["type"] not in {"ip_session", "fixed_count", "fixed_time"} or int(window["size"]) <= 0:
         raise ValueError("window type must be ip_session/fixed_count/fixed_time and size must be positive")
@@ -79,6 +88,14 @@ def _validate_config(config: dict[str, Any]) -> None:
 
 def _scores(model: MarkovModel, windows: tuple[EventWindow, ...] | list[EventWindow]) -> list[float]:
     return [model.score_sequence(window.states).information_score for window in windows]
+
+
+def _record_experiment(record: dict[str, Any]) -> None:
+    """Append one reproducible build or evaluation record to the shared history."""
+    path = Path(os.environ.get("AEP_EXPERIMENT_LOG", "reports/experiment_history.jsonl"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(record, ensure_ascii=False, sort_keys=True) + "\n")
 
 
 def _split_event_csv(event_csv: str | Path, output_dir: str | Path,
@@ -146,14 +163,16 @@ def _load_state_catalog(event_csv: str | Path,
     return catalog
 
 
-def prepare_log_directory(input_dir: str | Path, output_dir: str | Path) -> dict[str, Any]:
+def prepare_log_directory(input_dir: str | Path, output_dir: str | Path,
+                          state_fields: list[str] | tuple[str, ...] | None = None) -> dict[str, Any]:
     """Parse supported raw logs and preprocess route requests into event CSV."""
     from .log_parser import LogParser
     from .route_preprocessor import RoutePreprocessor
 
     parsed = LogParser().parse_directory(input_dir, output_dir)
     event_csv = Path(output_dir) / "route_events.csv"
-    summary = RoutePreprocessor().process_csv(Path(output_dir) / "routes.csv", event_csv)
+    summary = RoutePreprocessor(EventEncoder(fields=state_fields)).process_csv(
+        Path(output_dir) / "routes.csv", event_csv)
     return {
         "parsed": {name: {"files": item.files, "parsed_rows": item.parsed_rows,
                           "malformed_rows": item.malformed_rows}
@@ -178,9 +197,20 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     if not validate_root.is_dir():
         raise NotADirectoryError(f"Validation log directory does not exist: {validate_root}")
     scratch = Path(work_dir) if work_dir else Path(model_dir).parent / "prepared"
-    train_data = prepare_log_directory(train_root, scratch / "Train")
-    validation_data = prepare_log_directory(validate_root, scratch / "Validate")
+    state_fields = settings["state"]["fields"]
+    train_data = prepare_log_directory(train_root, scratch / "Train", state_fields)
+    validation_data = prepare_log_directory(validate_root, scratch / "Validate", state_fields)
     curation_settings = settings.get("curation", {"enabled": False})
+    curation_settings.setdefault("exclude_paths", DEFAULT_CONFIG["curation"]["exclude_paths"])
+    curation_settings.setdefault("exclude_route_names", [])
+    for dataset in (train_data, validation_data):
+        filtered = exclude_event_csv(dataset["event_csv"],
+                                     Path(dataset["event_csv"]).with_name("scoring_route_events.csv"),
+                                     curation_settings)
+        dataset["event_csv"] = str(Path(dataset["event_csv"]).with_name("scoring_route_events.csv"))
+        dataset["preprocessed"]["processed_rows"] = filtered["processed_rows"]
+        dataset["preprocessed"]["skipped_rows"] += filtered["skipped_rows"]
+        dataset["preprocessed"]["skipped_by_reason"].update(filtered["skipped_by_reason"])
     if curation_settings.get("enabled", False):
         train_data["curation"] = curate_event_csv(
             train_data["event_csv"], scratch / "Train" / "curated", curation_settings)
@@ -215,7 +245,7 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
         "schema_version": 3,
         "state_encoding": {"version": STATE_ENCODING_VERSION,
                            "id_format": "sha256-canonical-state-description",
-                           "catalog_fields": ["method", "url_group", "status_category"]},
+                           "catalog_fields": state_fields},
         "unknown_state_policy": "map_to_reserved_unk_and_report_novelty",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "description": "Fitted statistical anomaly detector (Markov, AEP, information-score KDE)",
@@ -232,8 +262,14 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     (destination / "model.json").write_text(json.dumps(model_doc, indent=2), encoding="utf-8")
     with (destination / "density.pkl").open("wb") as stream:
         pickle.dump(density, stream, protocol=pickle.HIGHEST_PROTOCOL)
-    return {"model_dir": str(destination), **model_doc["window_counts"],
-            "training_data": train_data, "validation_data": validation_data}
+    summary = {"model_dir": str(destination), **model_doc["window_counts"],
+               "training_data": train_data, "validation_data": validation_data}
+    _record_experiment({"type": "build", "timestamp": model_doc["created_at"],
+                        "model_created_at": model_doc["created_at"],
+                        "model_dir": str(destination.resolve()), "parameters": settings,
+                        "result": {key: value for key, value in summary.items()
+                                   if key not in {"training_data", "validation_data"}}})
+    return summary
 
 
 def _label_value(window: EventWindow) -> bool | None:
@@ -285,7 +321,8 @@ def evaluate_event_csv(event_csv: str | Path, model_dir: str | Path,
                        output_dir: str | Path) -> dict[str, Any]:
     """Evaluate the saved detector on a separate dataset without fitting or tuning."""
     detector = TrainedDetector(model_dir)
-    prepared_csv = ensure_state_ids_csv(event_csv, Path(output_dir) / "prepared" / "state_events.csv")
+    prepared_csv = ensure_state_ids_csv(event_csv, Path(output_dir) / "prepared" / "state_events.csv",
+                                        detector.metadata["config"]["state"]["fields"])
     windows = load_windows(prepared_csv, **detector.metadata["config"]["window"])
     results: dict[str, Any] = {}
     output_root = Path(output_dir)
@@ -324,9 +361,16 @@ def evaluate_event_csv(event_csv: str | Path, model_dir: str | Path,
         with (output_root / f"{mode}.jsonl").open("w", encoding="utf-8") as stream:
             stream.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
     report = {"detector_description": detector.metadata.get("description", "Statistical anomaly detector"),
+              "model_dir": str(Path(model_dir).resolve()),
+              "model_created_at": detector.metadata.get("created_at"),
               "test_event_csv": str(prepared_csv), "window_count": len(windows),
               "sequence_settings": detector.metadata["config"]["window"], "comparisons": results}
     (output_root / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    _record_experiment({"type": "evaluation", "timestamp": datetime.now(timezone.utc).isoformat(),
+                        "model_dir": str(Path(model_dir).resolve()),
+                        "model_created_at": detector.metadata.get("created_at"),
+                        "dataset": str(Path(event_csv).resolve()),
+                        "parameters": detector.metadata.get("config", {}), "result": report})
     return report
 
 
@@ -336,7 +380,16 @@ def evaluate_directory(test_dir: str | Path, model_dir: str | Path,
     if not test_root.is_dir():
         raise NotADirectoryError(f"Test log directory does not exist: {test_root}")
     scratch = Path(work_dir) if work_dir else Path(output_dir) / "prepared"
-    prepared = prepare_log_directory(test_root, scratch)
+    detector = TrainedDetector(model_dir)
+    prepared = prepare_log_directory(test_root, scratch, detector.metadata["config"]["state"]["fields"])
+    curation = detector.metadata.get("config", {}).get("curation", {})
+    curation.setdefault("exclude_paths", DEFAULT_CONFIG["curation"]["exclude_paths"])
+    filtered_path = Path(prepared["event_csv"]).with_name("scoring_route_events.csv")
+    filtered = exclude_event_csv(prepared["event_csv"], filtered_path, curation)
+    prepared["event_csv"] = str(filtered_path)
+    prepared["preprocessed"]["processed_rows"] = filtered["processed_rows"]
+    prepared["preprocessed"]["skipped_rows"] += filtered["skipped_rows"]
+    prepared["preprocessed"]["skipped_by_reason"].update(filtered["skipped_by_reason"])
     report = evaluate_event_csv(prepared["event_csv"], model_dir, output_dir)
     report["test_data"] = prepared
     (Path(output_dir) / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
@@ -356,8 +409,13 @@ def analyze_uploaded_log(uploaded_path: str | Path, model_dir: str | Path) -> di
         named.write_bytes(source.read_bytes())
         parsed = LogParser().parse_directory(root, root / "parsed")
         event_csv = root / "parsed" / "route_events.csv"
-        prepared = RoutePreprocessor().process_csv(root / "parsed" / "routes.csv", event_csv)
         detector = TrainedDetector(model_dir)
+        prepared = RoutePreprocessor(EventEncoder(fields=detector.metadata["config"]["state"]["fields"])).process_csv(
+            root / "parsed" / "routes.csv", event_csv)
+        curation = detector.metadata.get("config", {}).get("curation", {})
+        curation.setdefault("exclude_paths", DEFAULT_CONFIG["curation"]["exclude_paths"])
+        excluded = exclude_event_csv(event_csv, root / "parsed" / "scoring_route_events.csv", curation)
+        event_csv = root / "parsed" / "scoring_route_events.csv"
         windows = load_windows(event_csv, **detector.metadata["config"]["window"])
         modes = ("aep", "density", "hybrid")
         results_by_mode: dict[str, list[dict[str, Any]]] = {mode: [] for mode in modes}
@@ -430,9 +488,10 @@ def analyze_uploaded_log(uploaded_path: str | Path, model_dir: str | Path) -> di
                                  "malformed_rows": stat.malformed_rows}
                           for name, stat in parsed.items()},
                 "preprocessing": {"input_rows": prepared.input_rows,
-                                  "processed_rows": prepared.processed_rows,
-                                  "skipped_rows": prepared.skipped_rows,
-                                  "skipped_by_reason": prepared.skipped_by_reason,
+                                  "processed_rows": excluded["processed_rows"],
+                                  "skipped_rows": prepared.skipped_rows + excluded["skipped_rows"],
+                                  "skipped_by_reason": {**prepared.skipped_by_reason,
+                                      **excluded["skipped_by_reason"]},
                                   "missing_ip_rows": prepared.missing_ip_rows},
                 "window_count": len(windows), "comparisons": comparisons,
                 "results_by_mode": results_by_mode, "anomalies_by_mode": anomalies_by_mode,
@@ -444,7 +503,8 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
     """Chronologically split events, curate Train only, then fit and persist artifacts."""
     settings = config or load_config()
     _validate_config(settings)
-    state_csv = ensure_state_ids_csv(event_csv, Path(model_dir).parent / "prepared" / "training_state_events.csv")
+    state_csv = ensure_state_ids_csv(event_csv, Path(model_dir).parent / "prepared" / "training_state_events.csv",
+                                     settings["state"]["fields"])
     split_settings = settings["split"]
     partitions = _split_event_csv(
         state_csv,
@@ -476,7 +536,7 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
         "schema_version": 3,
         "state_encoding": {"version": STATE_ENCODING_VERSION,
                            "id_format": "sha256-canonical-state-description",
-                           "catalog_fields": ["method", "url_group", "status_category"]},
+                           "catalog_fields": settings["state"]["fields"]},
         "unknown_state_policy": "map_to_reserved_unk_and_report_novelty",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "config": settings,
@@ -491,9 +551,14 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
     (destination / "model.json").write_text(json.dumps(model_doc, indent=2), encoding="utf-8")
     with (destination / "density.pkl").open("wb") as stream:
         pickle.dump(density, stream, protocol=pickle.HIGHEST_PROTOCOL)
-    return {"model_dir": str(destination),
-            "windows": len(training_windows) + len(validation_windows) + len(testing_windows),
-            **model_doc["split_windows"]}
+    summary = {"model_dir": str(destination),
+               "windows": len(training_windows) + len(validation_windows) + len(testing_windows),
+               **model_doc["split_windows"]}
+    _record_experiment({"type": "build", "timestamp": model_doc["created_at"],
+                        "model_created_at": model_doc["created_at"],
+                        "model_dir": str(destination.resolve()), "parameters": settings,
+                        "result": summary})
+    return summary
 
 
 class TrainedDetector:
@@ -506,6 +571,9 @@ class TrainedDetector:
             raise ValueError("unsupported model bundle schema version")
         if self.metadata.get("state_encoding", {}).get("version") != STATE_ENCODING_VERSION:
             raise ValueError("model uses a different state encoding; rebuild it with the current pipeline")
+        self.metadata.setdefault("config", {}).setdefault(
+            "state", {"fields": self.metadata.get("state_encoding", {}).get(
+                "catalog_fields", list(EventEncoder.VALID_FIELDS))})
         self.model = MarkovModel.from_dict(self.metadata["markov"])
         with (root / "density.pkl").open("rb") as stream:
             self.density: InformationScoreDensity = pickle.load(stream)
@@ -577,7 +645,8 @@ def detect_file(event_csv: str | Path, model_dir: str | Path,
     detector = TrainedDetector(model_dir)
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    prepared_csv = ensure_state_ids_csv(event_csv, destination.parent / "prepared" / "state_events.csv")
+    prepared_csv = ensure_state_ids_csv(event_csv, destination.parent / "prepared" / "state_events.csv",
+                                        detector.metadata["config"]["state"]["fields"])
     windows = load_windows(prepared_csv, **detector.metadata["config"]["window"])
     with destination.open("w", encoding="utf-8") as stream:
         for window in windows:

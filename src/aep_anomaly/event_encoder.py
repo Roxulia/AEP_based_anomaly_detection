@@ -16,10 +16,17 @@ STATE_ENCODING_VERSION = 4
 class EventEncoder:
     """Create stable opaque state IDs and separate human-readable descriptions."""
 
+    VALID_FIELDS = ("method", "url_group", "status_category")
+
     def __init__(self, route_normalizer: RouteNormalizer | None = None,
-                 route_grouper: RouteGrouper | None = None) -> None:
+                 route_grouper: RouteGrouper | None = None,
+                 fields: tuple[str, ...] | list[str] | None = None) -> None:
         self.route_normalizer = route_normalizer or RouteNormalizer()
         self.route_grouper = route_grouper or RouteGrouper()
+        self.fields = tuple(self.VALID_FIELDS if fields is None else fields)
+        if not self.fields or len(set(self.fields)) != len(self.fields) or any(
+                field not in self.VALID_FIELDS for field in self.fields):
+            raise ValueError(f"state fields must be a non-empty unique subset of {self.VALID_FIELDS}")
 
     def describe(self, method: str | None, uri: str | None, status: object) -> StateDescription:
         """Extract the interpretable state dimensions from an HTTP request."""
@@ -29,8 +36,9 @@ class EventEncoder:
         normalized_uri = self.route_normalizer.normalize(uri)
         url_group = self.route_grouper.group(normalized_uri)
         status_category = self._status_category(status)
-        return {"method": normalized_method, "url_group": url_group,
-                "status_category": status_category}
+        values = {"method": normalized_method, "url_group": url_group,
+                  "status_category": status_category}
+        return {field: values[field] for field in self.fields}
 
     @staticmethod
     def state_id(description: StateDescription) -> StateId:

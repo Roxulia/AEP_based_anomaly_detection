@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from .event_encoder import EventEncoder
+from .curation import is_excluded_application_route
 from .log_parser import LogParser
 from .pipeline import TrainedDetector
 from .route_preprocessor import RoutePreprocessor
@@ -50,6 +51,8 @@ class LogFolderMonitor:
             raise NotADirectoryError(f"Watched log directory does not exist: {self.watch_dir}")
         self.database.parent.mkdir(parents=True, exist_ok=True)
         detector = TrainedDetector(self.model_dir)
+        route_filter = detector.metadata.get("config", {}).get("curation", {})
+        route_filter.setdefault("exclude_paths", ["/api/app/compatibility"])
         model_window = detector.metadata.get("config", {}).get("window", {})
         compared_keys = (("type", "timeout_seconds", "min_events", "missing_ip")
                          if self.window_type == "ip_session" else ("type", "size"))
@@ -58,15 +61,92 @@ class LogFolderMonitor:
         if any(self.window_config.get(key, defaults[key]) != model_window.get(key, defaults[key])
                for key in compared_keys):
             raise ValueError("monitor session settings differ from the saved model; rebuild the model or use its configuration")
-        encoder = EventEncoder()
+        encoder = EventEncoder(fields=detector.metadata.get("config", {}).get("state", {}).get(
+            "fields", EventEncoder.VALID_FIELDS))
         with sqlite3.connect(self.database) as db:
             db.execute("CREATE TABLE IF NOT EXISTS files (file_id TEXT PRIMARY KEY, path TEXT NOT NULL, offset INTEGER NOT NULL)")
-            db.execute("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY AUTOINCREMENT, event_json TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, payload TEXT NOT NULL, acknowledged INTEGER NOT NULL DEFAULT 0)")
             db.execute("CREATE TABLE IF NOT EXISTS skipped_lines (id INTEGER PRIMARY KEY AUTOINCREMENT, source_file TEXT NOT NULL, byte_offset INTEGER NOT NULL, parse_status TEXT NOT NULL, raw_line TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS monitor_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS sessions (ip TEXT PRIMARY KEY, last_timestamp TEXT NOT NULL, events_json TEXT NOT NULL, window_id INTEGER NOT NULL)")
+            db.execute("CREATE TABLE IF NOT EXISTS live_alerts (ip TEXT PRIMARY KEY, alert_id INTEGER NOT NULL)")
             rows_read = 0
             malformed_rows = 0
+            excluded_rows = 0
+            scored_sessions = 0
+
+            def resolve_alert(ip: str, latest: dict[str, Any] | None = None) -> None:
+                active = db.execute("SELECT alert_id FROM live_alerts WHERE ip=?", (ip,)).fetchone()
+                if active is None:
+                    return
+                row = db.execute("SELECT payload FROM alerts WHERE id=?", (active[0],)).fetchone()
+                if row:
+                    payload = json.loads(row[0])
+                    payload["resolved"] = True
+                    if latest is not None:
+                        payload.update(latest)
+                        payload["resolved"] = True
+                    db.execute("UPDATE alerts SET payload=?, acknowledged=1 WHERE id=?",
+                               (json.dumps(payload, ensure_ascii=False), active[0]))
+                db.execute("DELETE FROM live_alerts WHERE ip=?", (ip,))
+
+            def process_event(event: dict[str, Any]) -> None:
+                nonlocal scored_sessions
+                ip = event["ip"]
+                timestamp = RoutePreprocessor._parse_timestamp(event["timestamp"])
+                prior = db.execute("SELECT last_timestamp,events_json,window_id FROM sessions WHERE ip=?",
+                                   (ip,)).fetchone()
+                records: list[dict[str, Any]] = []
+                if prior:
+                    last = RoutePreprocessor._parse_timestamp(prior[0])
+                    if last is not None and timestamp is not None and timestamp - last > timedelta(seconds=self.timeout_seconds if self.window_type == "ip_session" else 60):
+                        resolve_alert(ip)
+                    else:
+                        records = json.loads(prior[1])
+                if not records:
+                    sequence = db.execute("SELECT value FROM monitor_state WHERE key='next_window_id'").fetchone()
+                    window_id = int(sequence[0]) if sequence else 0
+                    db.execute("INSERT INTO monitor_state(key,value) VALUES('next_window_id',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                               (str(window_id + 1),))
+                else:
+                    window_id = int(prior[2])
+                records.append(event)
+                db.execute("INSERT INTO sessions(ip,last_timestamp,events_json,window_id) VALUES(?,?,?,?) "
+                           "ON CONFLICT(ip) DO UPDATE SET last_timestamp=excluded.last_timestamp,events_json=excluded.events_json,window_id=excluded.window_id",
+                           (ip, event["timestamp"], json.dumps(records, ensure_ascii=False), window_id))
+                states = tuple(item["state_id"] for item in records)
+                descriptions = tuple(json.loads(item.get("state_description", "{}")) for item in records)
+                window = EventWindow(window_id, records[0]["timestamp"], event["timestamp"],
+                                     tuple(records), states, client_ip=ip,
+                                     state_descriptions=descriptions)
+                result: dict[str, Any]
+                try:
+                    result = detector.score(window)
+                    result["scorable"] = True
+                except ValueError as exc:
+                    if "not observed during fit" not in str(exc):
+                        raise
+                    result = {"window_id": window_id, "start_time": records[0]["timestamp"],
+                              "end_time": event["timestamp"], "event_count": len(records),
+                              "client_ip": ip, "events": records, "scorable": False,
+                              "final_anomalous": False, "anomaly_reasons": [],
+                              "unscorable_reason": str(exc)}
+                result.update(source="watched_folder", resolved=False,
+                              session_update=True, event_count=len(records), client_ip=ip)
+                scored_sessions += 1
+                active = db.execute("SELECT alert_id FROM live_alerts WHERE ip=?", (ip,)).fetchone()
+                if result.get("final_anomalous") is True:
+                    if active:
+                        db.execute("UPDATE alerts SET created_at=?,payload=?,acknowledged=0 WHERE id=?",
+                                   (datetime.now(timezone.utc).isoformat(),
+                                    json.dumps(result, ensure_ascii=False), active[0]))
+                    else:
+                        cursor = db.execute("INSERT INTO alerts(created_at,payload,acknowledged) VALUES(?,?,0)",
+                                            (datetime.now(timezone.utc).isoformat(),
+                                             json.dumps(result, ensure_ascii=False)))
+                        db.execute("INSERT INTO live_alerts(ip,alert_id) VALUES(?,?)", (ip, cursor.lastrowid))
+                elif active:
+                    resolve_alert(ip, result)
             for path in sorted(self.watch_dir.glob("routes-*.log"), key=lambda item: item.name.lower()):
                 stat = path.stat()
                 identity = f"{stat.st_dev}:{stat.st_ino}"
@@ -86,7 +166,13 @@ class LogFolderMonitor:
                             stream.seek(line_start)
                             break
                         row = LogParser._parse_line("routes", raw.decode("utf-8", errors="replace").rstrip("\r\n"), path.name)
-                        if row["parse_status"] == "ok" and RoutePreprocessor._parse_timestamp(row["timestamp"]) is not None:
+                        exclusion_candidate = dict(row)
+                        exclusion_candidate["normalized_uri"] = encoder.route_normalizer.normalize(row.get("uri"))
+                        if row["parse_status"] == "ok" and RoutePreprocessor._parse_timestamp(row["timestamp"]) is not None and is_excluded_application_route(exclusion_candidate, route_filter):
+                            excluded_rows += 1
+                            db.execute("INSERT INTO skipped_lines(source_file,byte_offset,parse_status,raw_line) VALUES(?,?,?,?)",
+                                       (str(path), line_start, "excluded_application_route", row["raw_line"]))
+                        elif row["parse_status"] == "ok" and RoutePreprocessor._parse_timestamp(row["timestamp"]) is not None:
                             state_id, description = encoder.encode_with_description(
                                 row.get("method"), row.get("uri"), row.get("status"))
                             normalized_uri = encoder.route_normalizer.normalize(row.get("uri"))
@@ -94,16 +180,16 @@ class LogFolderMonitor:
                             event = {
                                 "timestamp": row["timestamp"], "state_id": state_id,
                                 "state_description": json.dumps(description, ensure_ascii=False, sort_keys=True),
-                                "method": description["method"],
+                                "method": (row.get("method") or "unknown").strip().upper() or "unknown",
                                 "normalized_uri": normalized_uri, "status_class": status_class,
-                                "url_group": description["url_group"],
-                                "status_category": description["status_category"],
+                                "url_group": description.get("url_group", ""),
+                                "status_category": description.get("status_category", ""),
                                 "source_file": path.name, "uri": row.get("uri", ""),
                                 "status": row.get("status", ""), "raw_line": row.get("raw_line", ""),
                                 "ip": row.get("ip", "") or self.missing_ip,
                             }
-                            db.execute("INSERT INTO events(event_json) VALUES (?)", (json.dumps(event),))
                             rows_read += 1
+                            process_event(event)
                         else:
                             malformed_rows += 1
                             db.execute("INSERT INTO skipped_lines(source_file,byte_offset,parse_status,raw_line) VALUES(?,?,?,?)",
@@ -114,64 +200,9 @@ class LogFolderMonitor:
                 db.execute("INSERT INTO files(file_id,path,offset) VALUES(?,?,?) ON CONFLICT(file_id) DO UPDATE SET path=excluded.path, offset=excluded.offset",
                            (identity, str(path), final_offset))
 
-            consumed = 0
-            scored_sessions = 0
-            available = db.execute("SELECT id,event_json FROM events").fetchall()
-            grouped: dict[str, list[tuple[int, dict[str, Any], datetime]]] = {}
-            for event_id, event_json in available:
-                record = json.loads(event_json)
-                if not record.get("state_id"):
-                    state_id, description = encoder.encode_with_description(
-                        record.get("method"), record.get("uri"), record.get("status"))
-                    record["state_id"] = state_id
-                    record["state_description"] = json.dumps(
-                        description, ensure_ascii=False, sort_keys=True)
-                timestamp = RoutePreprocessor._parse_timestamp(record.get("timestamp", ""))
-                if timestamp is None:
-                    continue
-                ip = (record.get("ip") or self.missing_ip).strip()
-                grouped.setdefault(ip, []).append((int(event_id), record, timestamp))
-
-            now = datetime.now(timezone.utc)
-            timeout = timedelta(seconds=self.timeout_seconds) if self.window_type == "ip_session" else None
-            closed: list[tuple[str, list[tuple[int, dict[str, Any], datetime]]]] = []
-            for ip, records in grouped.items():
-                records.sort(key=lambda item: (item[2], item[0]))
-                current: list[tuple[int, dict[str, Any], datetime]] = []
-                for item in records:
-                    if current and timeout is not None and item[2] - current[-1][2] > timeout:
-                        closed.append((ip, current))
-                        current = []
-                    current.append(item)
-                if current:
-                    if self.window_type == "fixed_count":
-                        while len(current) >= self.window_size:
-                            closed.append((ip, current[:self.window_size]))
-                            current = current[self.window_size:]
-                    elif now - current[-1][2] >= timeout:
-                        closed.append((ip, current))
-
-            for ip, items in closed:
-                records = [item[1] for item in items]
-                selected_ids = [item[0] for item in items]
-                if len(records) >= self.min_events:
-                    states = tuple(item["state_id"] for item in records)
-                    descriptions = tuple(json.loads(item.get("state_description", "{}"))
-                                         for item in records)
-                    window = EventWindow(selected_ids[0], records[0]["timestamp"], records[-1]["timestamp"],
-                                         tuple(records), states, client_ip=ip,
-                                         state_descriptions=descriptions)
-                    result: dict[str, Any] = detector.score(window)
-                    result["scorable"] = True
-                    result["source"] = "watched_folder"
-                    scored_sessions += 1
-                    if result.get("final_anomalous") is True:
-                        db.execute("INSERT INTO alerts(created_at,payload) VALUES(?,?)",
-                                   (datetime.now(timezone.utc).isoformat(), json.dumps(result, ensure_ascii=False)))
-                db.executemany("DELETE FROM events WHERE id = ?", [(item_id,) for item_id in selected_ids])
-                consumed += len(selected_ids)
             db.commit()
         return {"new_requests": rows_read, "malformed_lines": malformed_rows,
+                "excluded_application_routes": excluded_rows,
                 "scored_windows": scored_sessions, "scored_sessions": scored_sessions,
                 "pending_requests": self.pending_count()}
 
@@ -180,7 +211,11 @@ class LogFolderMonitor:
             return 0
         with sqlite3.connect(self.database) as db:
             try:
-                return int(db.execute("SELECT COUNT(*) FROM events").fetchone()[0])
+                try:
+                    sessions = db.execute("SELECT events_json FROM sessions").fetchall()
+                    return sum(len(json.loads(row[0])) for row in sessions)
+                except sqlite3.OperationalError:
+                    return int(db.execute("SELECT COUNT(*) FROM events").fetchone()[0])
             except sqlite3.OperationalError:
                 return 0
 

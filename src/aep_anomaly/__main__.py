@@ -55,7 +55,7 @@ def main() -> int:
     monitor.add_argument("--watch-dir", type=Path, default=project_root / "Data" / "live")
     monitor.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
     monitor.add_argument("--database", type=Path, default=project_root / "Data" / "alerts.sqlite3")
-    monitor.add_argument("--interval", type=float, default=5.0)
+    monitor.add_argument("--interval", type=float, default=1.0)
     monitor.add_argument("--config", type=Path, default=project_root / "config" / "default.yaml")
     args = parser.parse_args(arguments)
 
@@ -66,7 +66,8 @@ def main() -> int:
                   f"malformed={stats.malformed_rows}, output={stats.output_path}")
     elif args.command == "curate":
         config = load_config(args.config)
-        prepared = prepare_log_directory(args.input_dir, args.output_dir)
+        prepared = prepare_log_directory(args.input_dir, args.output_dir,
+                                         config["state"]["fields"])
         result = curate_event_csv(prepared["event_csv"], args.output_dir / "curated",
                                   config.get("curation", {}))
         counts = result.get("counts", {})

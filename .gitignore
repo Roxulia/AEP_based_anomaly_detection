@@ -1,6 +1,9 @@
 *.venv
 .venv/
 Data/*
+!Data/live/
+Data/live/*
+!Data/live/routes-live.log
 models/
 reports/evaluation/
 frontend/node_modules/

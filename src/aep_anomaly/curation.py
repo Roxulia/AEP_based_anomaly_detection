@@ -15,6 +15,18 @@ DECISION_FIELDS = (
 )
 
 
+def is_excluded_application_route(row: dict[str, Any], config: dict[str, Any] | None = None) -> bool:
+    """Check explicit path/name exclusions used by batch and live pipelines."""
+    settings = config or {}
+    path = str(row.get("normalized_uri") or row.get("uri") or "").split("?", 1)[0]
+    path = path.strip().rstrip("/") or "/"
+    paths = {str(item).strip().split("?", 1)[0].rstrip("/") or "/"
+             for item in settings.get("exclude_paths", []) if str(item).strip()}
+    names = {str(item).strip() for item in settings.get("exclude_route_names", [])
+             if str(item).strip()}
+    return path in paths or str(row.get("route_name") or "").strip() in names
+
+
 def curate_event_csv(input_csv: str | Path, output_dir: str | Path,
                      config: dict[str, Any] | None = None) -> dict[str, Any]:
     """Write allowlisted normal events and unlisted review events.
@@ -107,3 +119,29 @@ def curate_event_csv(input_csv: str | Path, output_dir: str | Path,
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
     manifest["manifest_path"] = str(manifest_path)
     return manifest
+
+
+def exclude_event_csv(input_csv: str | Path, output_csv: str | Path,
+                      config: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Remove explicitly configured application-only routes from scoring input."""
+    settings = config or {}
+    source, destination = Path(input_csv), Path(output_csv)
+    with source.open("r", encoding="utf-8-sig", newline="") as stream:
+        reader = csv.DictReader(stream)
+        fields = list(reader.fieldnames or [])
+        if not fields:
+            raise ValueError(f"event CSV has no header: {source}")
+        kept: list[dict[str, str]] = []
+        excluded = Counter()
+        for row in reader:
+            if is_excluded_application_route(row, settings):
+                excluded["excluded_application_route"] += 1
+            else:
+                kept.append(row)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with destination.open("w", encoding="utf-8-sig", newline="") as stream:
+        writer = csv.DictWriter(stream, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(kept)
+    return {"processed_rows": len(kept), "skipped_rows": sum(excluded.values()),
+            "skipped_by_reason": dict(excluded)}

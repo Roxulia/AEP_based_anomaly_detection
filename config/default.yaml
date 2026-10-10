@@ -5,6 +5,10 @@
   processed_dir: Data/processed
 curation:
   enabled: true
+  # Compatibility probes are application plumbing, not user request behavior.
+  exclude_paths:
+    - /api/app/compatibility
+  exclude_route_names: []
   # Exact, reviewed application endpoints. Requests outside this inventory are
   # written to a review file and excluded from fitting/calibration.
   application_routes:
@@ -357,11 +361,14 @@ curation:
     - storage.local.upload
 window:
   type: ip_session
-  size: 50
+  size: 20
   include_partial: true
   timeout_seconds: 60
   min_events: 3
   missing_ip: unknown
+state:
+  # Select which request attributes define a Markov state.
+  fields: [method, url_group]
 markov:
   smoothing: 0.5
 aep:

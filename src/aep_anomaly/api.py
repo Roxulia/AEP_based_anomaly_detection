@@ -20,11 +20,21 @@ ROOT = Path(__file__).resolve().parents[2]
 CONFIG_PATH = Path(os.getenv("AEP_CONFIG", ROOT / "config" / "default.yaml"))
 CONFIG = load_config(CONFIG_PATH)
 MODEL_DIR = Path(os.getenv("AEP_MODEL_DIR", ROOT / "models" / "default"))
-WATCH_DIR = Path(os.getenv("AEP_WATCH_DIR", ROOT / "Data" / "live"))
+_watch_dir_override = os.getenv("AEP_WATCH_DIR")
+_watch_file_override = os.getenv("AEP_WATCH_FILE")
+WATCH_DIR = Path(_watch_dir_override or (_watch_file_override and Path(_watch_file_override).parent)
+                 or ROOT / "Data" / "live")
+WATCH_FILE = Path(_watch_file_override or WATCH_DIR / "routes-live.log")
 ALERT_DB = Path(os.getenv("AEP_ALERT_DB", ROOT / "Data" / "alerts.sqlite3"))
 app = FastAPI(title="Server Statistical Anomaly Analysis API", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"],
                    allow_credentials=True, allow_methods=["GET", "POST"], allow_headers=["*"])
+
+
+@app.on_event("startup")
+def ensure_default_live_log() -> None:
+    WATCH_FILE.parent.mkdir(parents=True, exist_ok=True)
+    WATCH_FILE.touch(exist_ok=True)
 
 
 def _monitor() -> LogFolderMonitor:
@@ -89,7 +99,8 @@ def summary() -> dict:
                      for name, value in (("train", datasets["train_dir"]),
                                          ("validate", datasets["validate_dir"]),
                                          ("test", datasets["test_dir"]))},
-        "watch_dir": str(WATCH_DIR), "watch_dir_available": WATCH_DIR.is_dir(),
+        "watch_dir": str(WATCH_DIR), "watch_file": str(WATCH_FILE),
+        "watch_dir_available": WATCH_DIR.is_dir(),
     }
 
 

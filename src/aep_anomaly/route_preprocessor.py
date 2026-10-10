@@ -80,11 +80,11 @@ class RoutePreprocessor:
                     "timestamp": timestamp,
                     "state_id": state_id,
                     "state_description": json.dumps(description, ensure_ascii=False, sort_keys=True),
-                    "method": description["method"],
+                    "method": (row.get("method") or "unknown").strip().upper() or "unknown",
                     "normalized_uri": normalized_uri,
                     "status_class": status_class,
-                    "url_group": description["url_group"],
-                    "status_category": description["status_category"],
+                    "url_group": description.get("url_group", ""),
+                    "status_category": description.get("status_category", ""),
                     "ip": row.get("ip", ""),
                     "source_file": row.get("source_file", ""),
                     "route_name": row.get("route_name", ""),
@@ -124,7 +124,8 @@ class RoutePreprocessor:
         return parsed.astimezone(timezone.utc)
 
 
-def ensure_state_ids_csv(input_csv: str | Path, output_csv: str | Path) -> Path:
+def ensure_state_ids_csv(input_csv: str | Path, output_csv: str | Path,
+                         state_fields: tuple[str, ...] | list[str] | None = None) -> Path:
     """Upgrade a legacy prepared event CSV into the preprocessing state-ID format.
 
     State interpretation remains here in preprocessing. Windowing and statistical
@@ -135,30 +136,44 @@ def ensure_state_ids_csv(input_csv: str | Path, output_csv: str | Path) -> Path:
         raise FileNotFoundError(f"Event CSV does not exist: {source}")
     with source.open("r", encoding="utf-8-sig", newline="") as stream:
         reader = csv.DictReader(stream)
-        fields = list(reader.fieldnames or ())
+        columns = list(reader.fieldnames or ())
         rows = list(reader)
-    if "state_id" in fields:
-        return source
-    encoder = EventEncoder()
-    has_grouped = {"url_group", "status_category"}.issubset(fields)
-    if "timestamp" not in fields or "method" not in fields:
+    encoder = EventEncoder(fields=state_fields)
+    # Re-encode even previously prepared rows so config changes cannot silently
+    # retain state IDs built with a different set of fields.
+    has_descriptions = "state_description" in columns
+    has_grouped = {"url_group", "status_category"}.issubset(columns)
+    if "timestamp" not in columns or "method" not in columns:
         raise ValueError("legacy event CSV requires timestamp and method columns")
-    if not has_grouped and not {"normalized_uri", "status_class"}.issubset(fields):
+    if not has_grouped and not {"normalized_uri", "status_class"}.issubset(columns):
         raise ValueError("legacy event CSV requires grouped-state or normalized URI/status columns")
 
-    new_fields = ["state_id", "state_description", *[field for field in fields
+    new_fields = ["state_id", "state_description", *[field for field in columns
                                                        if field not in {"state_id", "state_description"}]]
     destination.parent.mkdir(parents=True, exist_ok=True)
     with destination.open("w", encoding="utf-8-sig", newline="") as stream:
         writer = csv.DictWriter(stream, fieldnames=new_fields, extrasaction="ignore")
         writer.writeheader()
         for row in rows:
-            if has_grouped:
-                description = {
+            if has_descriptions:
+                try:
+                    full_description = json.loads(row.get("state_description") or "{}")
+                except json.JSONDecodeError as exc:
+                    raise ValueError("legacy event CSV contains an invalid state_description") from exc
+                description = {}
+                for field in encoder.fields:
+                    value = full_description.get(field, row.get(field))
+                    if value is None or value == "":
+                        value = "unknown"
+                    value = str(value)
+                    description[field] = value.strip().upper() if field == "method" else value
+            elif has_grouped:
+                full_description = {
                     "method": (row.get("method") or "unknown").strip().upper() or "unknown",
                     "url_group": (row.get("url_group") or "unknown").strip() or "unknown",
                     "status_category": (row.get("status_category") or "unknown").strip() or "unknown",
                 }
+                description = {field: full_description[field] for field in encoder.fields}
             else:
                 description = encoder.describe(row.get("method"),
                                                 row.get("uri") or row.get("normalized_uri"),
