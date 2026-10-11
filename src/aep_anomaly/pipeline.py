@@ -7,6 +7,7 @@ import csv
 import os
 import tempfile
 import pickle
+import math
 from datetime import datetime, timezone
 from collections import Counter
 from pathlib import Path
@@ -34,6 +35,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "curation": {
         "enabled": True,
+        "apply_allowlist_to_validation": True,
         "session_control": False,
         "exclude_paths": ["/api/app/compatibility"],
         "exclude_route_names": [],
@@ -53,7 +55,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "markov": {"enabled": True, "smoothing": 0.5},
     "aep": {"quantile": 0.99},
     "density": {"bandwidth": "scott", "epsilon": 1e-12, "quantile": 0.99},
-    "detector": {"mode": "hybrid"},
+    "detector": {"method": "AEP", "hybrid": {"alpha": 0.5,
+        "warning_quantile": 0.95, "critical_quantile": 0.99}},
     "evaluation": {"counting_unit": "session"},
 }
 
@@ -70,6 +73,8 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
         if section not in config or not isinstance(values, dict):
             raise ValueError(f"unknown or invalid configuration section: {section}")
         config[section].update(values)
+        if section == "detector" and "mode" in values and "method" not in values:
+            config[section]["method"] = str(values["mode"]).upper()
     _validate_config(config)
     return config
 
@@ -77,6 +82,8 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 def _validate_config(config: dict[str, Any]) -> None:
     if not isinstance(config.get("curation", {}).get("session_control", False), bool):
         raise ValueError("curation.session_control must be true or false")
+    if not isinstance(config.get("curation", {}).get("apply_allowlist_to_validation", True), bool):
+        raise ValueError("curation.apply_allowlist_to_validation must be true or false")
     fields = config.get("state", {}).get("fields")
     valid_fields = EventEncoder.VALID_FIELDS
     if not isinstance(fields, list) or not fields or len(set(fields)) != len(fields) or any(
@@ -89,8 +96,23 @@ def _validate_config(config: dict[str, Any]) -> None:
         raise ValueError("session timeout and minimum event count must be positive")
     if not str(window.get("missing_ip", "unknown")).strip():
         raise ValueError("missing_ip group must not be empty")
-    if config["detector"]["mode"] not in {"aep", "density", "hybrid"}:
-        raise ValueError("detector mode must be aep, density, or hybrid")
+    detector = config["detector"]
+    method = detector.get("method", str(detector.get("mode", "AEP")).upper())
+    if method not in {"AEP", "KDE", "HYBRID"}:
+        raise ValueError("detector.method must be AEP, KDE, or HYBRID")
+    detector["method"] = method
+    detector.pop("mode", None)
+    hybrid = detector.setdefault("hybrid", {})
+    hybrid.setdefault("alpha", 0.5)
+    hybrid.setdefault("warning_quantile", 0.95)
+    hybrid.setdefault("critical_quantile", 0.99)
+    alpha = float(hybrid.get("alpha", 0.5))
+    warning_q = float(hybrid.get("warning_quantile", 0.95))
+    critical_q = float(hybrid.get("critical_quantile", 0.99))
+    if not math.isfinite(alpha) or not 0 <= alpha <= 1:
+        raise ValueError("detector.hybrid.alpha must be between 0 and 1")
+    if not (0 < warning_q < critical_q < 1):
+        raise ValueError("hybrid warning and critical quantiles must satisfy 0 < warning < critical < 1")
     markov = config.get("markov", {})
     if not isinstance(markov.get("enabled", True), bool):
         raise ValueError("markov.enabled must be true or false")
@@ -104,6 +126,47 @@ def _validate_config(config: dict[str, Any]) -> None:
 
 def _scores(model: MarkovModel, windows: tuple[EventWindow, ...] | list[EventWindow]) -> list[float]:
     return [model.score_sequence(window.states).information_score for window in windows]
+
+
+def _quantile(values: list[float], quantile: float) -> float:
+    ordered = sorted(values)
+    if not ordered:
+        raise ValueError("cannot calibrate hybrid thresholds without validation scores")
+    position = quantile * (len(ordered) - 1)
+    lower, upper = math.floor(position), math.ceil(position)
+    return ordered[lower] * (upper - position) + ordered[upper] * (position - lower)
+
+
+def _fit_hybrid_calibration(train_information: list[float], validation_information: list[float],
+                            entropy_reference: float, density: InformationScoreDensity,
+                            settings: dict[str, Any]) -> dict[str, Any]:
+    """Fit component z-score statistics on normal Train data and cutoffs on Validate."""
+    def component_scores(values: list[float]) -> tuple[list[float], list[float]]:
+        aep = [abs(value - entropy_reference) for value in values]
+        kde = [density.score(value).anomaly_score for value in values]
+        return aep, kde
+
+    train_a, train_k = component_scores(train_information)
+    val_a, val_k = component_scores(validation_information)
+    stats = {}
+    for name, values in (("aep", train_a), ("kde", train_k)):
+        mean = math.fsum(values) / len(values)
+        sd = math.sqrt(math.fsum((value - mean) ** 2 for value in values) / len(values))
+        stats[name] = {"mean": mean, "standard_deviation": sd}
+
+    def fuse(a: float, k: float) -> float:
+        a_sd, k_sd = stats["aep"]["standard_deviation"], stats["kde"]["standard_deviation"]
+        a_norm = (a - stats["aep"]["mean"]) / a_sd if a_sd > 0 else 0.0
+        k_norm = (k - stats["kde"]["mean"]) / k_sd if k_sd > 0 else 0.0
+        alpha = float(settings["detector"]["hybrid"]["alpha"])
+        return alpha * a_norm + (1 - alpha) * k_norm
+
+    validation_fused = [fuse(a, k) for a, k in zip(val_a, val_k)]
+    hybrid = settings["detector"]["hybrid"]
+    return {"normal_score_statistics": stats,
+            "warning_threshold": _quantile(validation_fused, float(hybrid["warning_quantile"])),
+            "critical_threshold": _quantile(validation_fused, float(hybrid["critical_quantile"])),
+            "validation_fused_scores": len(validation_fused)}
 
 
 def _normal_partition_csv(event_csv: str | Path, output_dir: str | Path,
@@ -125,6 +188,18 @@ def _normal_partition_csv(event_csv: str | Path, output_dir: str | Path,
         details["curation"] = curated
         return Path(curated["outputs"]["normal"]), details
     return filtered_path, details
+
+
+def _partition_curation_settings(config: dict[str, Any], partition: str) -> dict[str, Any]:
+    """Return curation settings, optionally bypassing the route allowlist on Validate."""
+    settings = dict(config.get("curation", {"enabled": False}))
+    settings.setdefault("exclude_paths", DEFAULT_CONFIG["curation"]["exclude_paths"])
+    settings.setdefault("exclude_route_names", [])
+    if partition.lower() == "validate" and not settings.get("apply_allowlist_to_validation", True):
+        # Keep explicit plumbing exclusions, but don't use whitelist decisions to
+        # remove validation events from threshold calibration.
+        settings["enabled"] = False
+    return settings
 
 
 def _label_value(window: EventWindow) -> bool | None:
@@ -291,12 +366,10 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     state_fields = settings["state"]["fields"]
     train_data = prepare_log_directory(train_root, scratch / "Train", state_fields)
     validation_data = prepare_log_directory(validate_root, scratch / "Validate", state_fields)
-    curation_settings = settings.get("curation", {"enabled": False})
-    curation_settings.setdefault("exclude_paths", DEFAULT_CONFIG["curation"]["exclude_paths"])
-    curation_settings.setdefault("exclude_route_names", [])
     for name, dataset in (("Train", train_data), ("Validate", validation_data)):
         normal_csv, filtering = _normal_partition_csv(
-            dataset["event_csv"], scratch / name / "filtered", curation_settings,
+            dataset["event_csv"], scratch / name / "filtered",
+            _partition_curation_settings(settings, name),
             settings["window"])
         dataset["event_csv"] = str(normal_csv)
         excluded = filtering["excluded"]
@@ -345,6 +418,8 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     aep_threshold = aep.fit_threshold(validation_scores, entropy_reference)
     density = InformationScoreDensity(**settings["density"]).fit(train_scores)
     density_threshold = density.fit_threshold(validation_scores)
+    hybrid_calibration = _fit_hybrid_calibration(
+        train_scores, validation_scores, entropy_reference, density, settings)
     destination = Path(model_dir)
     destination.mkdir(parents=True, exist_ok=True)
     model_doc = {
@@ -370,6 +445,7 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
         "state_ids": list(model.states) if use_markov else [],
         "aep_threshold": aep_threshold,
         "density_threshold": density_threshold,
+        "hybrid_calibration": hybrid_calibration,
         "dataset_folders": {"train": str(train_root), "validate": str(validate_root)},
         "window_counts": {"training": len(train_windows), "validation": len(validation_windows),
                           "validation_unscorable": unscorable_validation},
@@ -430,9 +506,8 @@ def evaluate_event_csv(event_csv: str | Path, model_dir: str | Path,
             session_labels.append(session_label)
             session_decisions.append(bool(row["final_anomalous"]))
             session_scores.append(float(row["aep_deviation"] if mode == "aep" else
-                                         row["density_score"] if mode == "density" else
-                                         max(row["aep_deviation"] / max(row["aep_threshold"], 1e-12),
-                                             row["density_score"] / max(row["density_threshold"], 1e-12))))
+                                        row["density_score"] if mode == "density" else
+                                        row["hybrid_score"]))
             unallowlisted_requests += invalid_count
             request_labels.extend(request_is_unallowlisted)
             request_scores.extend([session_scores[-1]] * len(request_is_unallowlisted))
@@ -451,6 +526,8 @@ def evaluate_event_csv(event_csv: str | Path, model_dir: str | Path,
             "session_alert_rate": alerted_sessions / len(windows) if windows else None,
             "positive_units": sum(labels),
             "detected_positive_units": sum(label and decision for label, decision in zip(labels, decisions)),
+            "hybrid_severity_counts": (dict(Counter(row.get("hybrid_severity", "UNKNOWN") for row in rows))
+                                       if mode == "hybrid" else None),
             "metrics": metrics,
         }
         with (output_root / f"{mode}.jsonl").open("w", encoding="utf-8") as stream:
@@ -464,6 +541,7 @@ def evaluate_event_csv(event_csv: str | Path, model_dir: str | Path,
               "sequence_settings": config["window"],
               "evaluation_method": "held-out Test sessions labeled by exact application route allowlist",
               "evaluation_counting_unit": counting_unit,
+              "hybrid_calibration": detector.hybrid_calibration,
               "allowlist": curation,
               "comparisons": results}
     (output_root / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
@@ -554,10 +632,7 @@ def analyze_uploaded_log(uploaded_path: str | Path, model_dir: str | Path) -> di
                     elif mode == "aep":
                         metric_scores.append(row["aep_deviation"])
                     else:
-                        metric_scores.append(max(
-                            row["aep_deviation"] / max(detector.aep.threshold or 0.0, 1e-12),
-                            row["density_score"] / max(detector.density.threshold or 0.0, 1e-12),
-                        ))
+                        metric_scores.append(row["hybrid_score"])
                 metrics = _binary_metrics(
                     [item[0] for item in scorable], metric_scores,
                     [bool(item[1]["final_anomalous"]) for item in scorable],
@@ -620,10 +695,11 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
     )
     train_csv, validation_csv, testing_csv = partitions
     prep_root = Path(model_dir).parent / "prepared"
-    curation_settings = settings.get("curation", {"enabled": False})
-    train_csv, _ = _normal_partition_csv(train_csv, prep_root / "training", curation_settings,
+    train_csv, _ = _normal_partition_csv(train_csv, prep_root / "training",
+                                         _partition_curation_settings(settings, "Train"),
                                          settings["window"])
-    validation_csv, _ = _normal_partition_csv(validation_csv, prep_root / "validation", curation_settings,
+    validation_csv, _ = _normal_partition_csv(validation_csv, prep_root / "validation",
+                                              _partition_curation_settings(settings, "Validate"),
                                               settings["window"])
     training_windows = load_windows(train_csv, **settings["window"])
     validation_windows = load_windows(validation_csv, **settings["window"])
@@ -651,6 +727,8 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
     aep_threshold = aep.fit_threshold(validation_scores, entropy_reference)
     density = InformationScoreDensity(**settings["density"]).fit(train_scores)
     density_threshold = density.fit_threshold(validation_scores)
+    hybrid_calibration = _fit_hybrid_calibration(
+        train_scores, validation_scores, entropy_reference, density, settings)
     destination = Path(model_dir)
     destination.mkdir(parents=True, exist_ok=True)
     model_doc = {
@@ -676,6 +754,7 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
         "state_ids": list(model.states) if use_markov else [],
         "aep_threshold": aep_threshold,
         "density_threshold": density_threshold,
+        "hybrid_calibration": hybrid_calibration,
         "split_windows": {"training": len(training_windows), "validation": len(validation_windows),
                           "testing": len(testing_windows)},
     }
@@ -723,7 +802,16 @@ class TrainedDetector:
         self.aep = AEPDetector(quantile=self.metadata["config"]["aep"]["quantile"])
         self.aep.threshold = float(self.metadata["aep_threshold"])
         self.density.threshold = float(self.metadata["density_threshold"])
-        self.mode = self.metadata["config"]["detector"]["mode"]
+        configured_method = self.metadata["config"]["detector"].get(
+            "method", self.metadata["config"]["detector"].get("mode", "AEP"))
+        self.mode = {"AEP": "aep", "KDE": "density", "HYBRID": "hybrid",
+                     "aep": "aep", "density": "density", "hybrid": "hybrid"}.get(
+                         configured_method)
+        if self.mode is None:
+            raise ValueError("model detector method must be AEP, KDE, or HYBRID")
+        self.hybrid_calibration = self.metadata.get("hybrid_calibration")
+        if self.mode == "hybrid" and not self.hybrid_calibration:
+            raise ValueError("model bundle lacks ScoreFusion calibration; rebuild it with the current pipeline")
 
     def score(self, window: EventWindow, mode: str | None = None) -> dict[str, Any]:
         independent_score = None
@@ -761,17 +849,35 @@ class TrainedDetector:
         selected_mode = mode or self.mode
         if selected_mode not in {"aep", "density", "hybrid"}:
             raise ValueError("mode must be aep, density, or hybrid")
+        fusion_score = None
+        severity = "NORMAL"
         if selected_mode == "aep":
             final = aep_score.anomalous
         elif selected_mode == "density":
             final = bool(density_score.anomalous)
         else:
-            final = aep_score.anomalous or bool(density_score.anomalous)
+            if not self.hybrid_calibration:
+                raise ValueError("model bundle lacks ScoreFusion calibration; rebuild it first")
+            stats = self.hybrid_calibration["normal_score_statistics"]
+            a_stats, k_stats = stats["aep"], stats["kde"]
+            a_norm = ((aep_score.aep_deviation - float(a_stats["mean"])) /
+                      float(a_stats["standard_deviation"])) if float(a_stats["standard_deviation"]) > 0 else 0.0
+            k_norm = ((density_score.anomaly_score - float(k_stats["mean"])) /
+                      float(k_stats["standard_deviation"])) if float(k_stats["standard_deviation"]) > 0 else 0.0
+            alpha = float(self.metadata["config"]["detector"]["hybrid"]["alpha"])
+            fusion_score = alpha * a_norm + (1 - alpha) * k_norm
+            warning = float(self.hybrid_calibration["warning_threshold"])
+            critical = float(self.hybrid_calibration["critical_threshold"])
+            severity = "CRITICAL" if fusion_score >= critical else (
+                "WARNING" if fusion_score >= warning else "NORMAL")
+            final = severity != "NORMAL"
         reasons = []
         if selected_mode in {"aep", "hybrid"} and aep_score.anomalous:
             reasons.append("normalized information score deviates from the learned entropy reference")
         if selected_mode in {"density", "hybrid"} and density_score.anomalous:
             reasons.append("information score lies beyond the validation density threshold")
+        if selected_mode == "hybrid" and severity != "NORMAL":
+            reasons.append(f"fused normalized AEP/KDE score reached {severity.lower()} severity")
         unknown_events = []
         for index in unknown_indices:
             item = {
@@ -810,6 +916,14 @@ class TrainedDetector:
             "density_score": density_score.anomaly_score,
             "density_threshold": self.density.threshold,
             "density_anomalous": density_score.anomalous, "final_anomalous": final,
+            "hybrid_score": fusion_score,
+            "hybrid_severity": severity if selected_mode == "hybrid" else None,
+            "hybrid_warning_threshold": (self.hybrid_calibration["warning_threshold"]
+                                         if self.hybrid_calibration else None),
+            "hybrid_critical_threshold": (self.hybrid_calibration["critical_threshold"]
+                                          if self.hybrid_calibration else None),
+            "aep_normalized_score": (a_norm if selected_mode == "hybrid" else None),
+            "kde_normalized_score": (k_norm if selected_mode == "hybrid" else None),
             "anomaly_reasons": reasons if final else [],
             "detector_mode": selected_mode,
             "transition_probabilities": transition_probabilities,

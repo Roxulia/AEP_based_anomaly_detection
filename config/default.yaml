@@ -5,9 +5,12 @@
   processed_dir: Data/processed
 curation:
   enabled: true
+  # Apply the route allowlist to validation calibration data. Set false to
+  # calibrate with all valid validation routes (explicit exclusions still apply).
+  apply_allowlist_to_validation: true
   # true removes a whole IP session when any request is outside the allowlist.
-  # false (default) removes only the unlisted requests.
-  session_control: false
+  # false keeps allowlisted requests and removes only the unlisted requests.
+  session_control: true
   # Compatibility probes are application plumbing, not user request behavior.
   exclude_paths:
     - /api/app/compatibility
@@ -384,7 +387,14 @@ density:
   epsilon: 1.0e-12
   quantile: 0.9
 detector:
-  mode: hybrid
+  # Select the model decision method: AEP, KDE, or HYBRID. Default: AEP.
+  method: AEP
+  hybrid:
+    # AEP contribution to the fused normalized score; KDE receives 1 - alpha.
+    alpha: 0.5
+    # Calibrate WARNING and CRITICAL cutoffs from validation-normal fused scores.
+    warning_quantile: 0.95
+    critical_quantile: 0.99
 evaluation:
   # Count each session containing unallowlisted routes once, or count requests.
   counting_unit: session

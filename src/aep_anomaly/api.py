@@ -60,10 +60,13 @@ def summary() -> dict:
         model_type = document.get("model_type", "markov")
         markov_payload = document.get("markov") or {}
         model_summary = {"model_type": model_type,
+                         "method": document.get("config", {}).get("detector", {}).get(
+                             "method", document.get("config", {}).get("detector", {}).get("mode", "AEP")),
                          "entropy_rate": document.get(
                              "entropy_reference_bits", markov_payload.get("entropy_rate_bits")),
                          "aep_threshold": document.get("aep_threshold"),
                          "density_threshold": document.get("density_threshold"),
+                         "hybrid_calibration": document.get("hybrid_calibration"),
                          "sequence_settings": document.get("config", {}).get("window", {}),
                          "window_counts": document.get("window_counts", document.get("split_windows", {}))}
     evaluation_path = ROOT / "reports" / "evaluation" / "evaluation.json"

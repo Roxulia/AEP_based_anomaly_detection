@@ -1,0 +1,9 @@
+[2026-09-17 14:32:21] testing.INFO: Route request completed. {"method":"POST","route_name":"platform.tenants.store","uri":"tenants","status":302,"ip":"127.0.0.1"} 
+[2026-09-17 14:32:23] testing.INFO: Route request completed. {"method":"PUT","route_name":"admin.package-flags.update","uri":"admin/package-flags","status":302,"ip":"127.0.0.1"} 
+[2026-09-17 14:32:23] testing.INFO: Route request completed. {"method":"POST","route_name":"admin.package-flags.plans.update","uri":"admin/package-flags/plans","status":302,"ip":"127.0.0.1"} 
+[2026-09-17 14:32:24] testing.INFO: Route request completed. {"method":"POST","route_name":"admin.package-flags.plans.update","uri":"admin/package-flags/plans","status":302,"ip":"127.0.0.1"} 
+[2026-09-17 14:32:24] testing.INFO: Route request completed. {"method":"POST","route_name":"admin.package-flags.features.store","uri":"admin/package-flags/features","status":302,"ip":"127.0.0.1"} 
+[2026-09-17 14:32:24] testing.INFO: Route request completed. {"method":"PUT","route_name":"admin.package-flags.features.update","uri":"admin/package-flags/features","status":302,"ip":"127.0.0.1"} 
+[2026-09-17 14:32:25] testing.INFO: Route request completed. {"method":"POST","route_name":"admin.package-flags.feature-assignment.update","uri":"admin/package-flags/feature-assignment","status":302,"ip":"127.0.0.1"} 
+[2026-09-17 14:32:25] testing.INFO: Route request completed. {"method":"POST","route_name":"admin.package-flags.features.store","uri":"admin/package-flags/features","status":302,"ip":"127.0.0.1"} 
+[2026-09-17 14:32:25] testing.INFO: Route request completed. {"method":"PUT","route_name":"admin.package-flags.features.update","uri":"admin/package-flags/features","status":302,"ip":"127.0.0.1"} 
