@@ -42,7 +42,7 @@ def main() -> int:
     build.add_argument("--validate-dir", type=Path)
     build.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
     build.add_argument("--work-dir", type=Path)
-    evaluate = commands.add_parser("evaluate", help="Evaluate a saved detector on a separate Test folder.")
+    evaluate = commands.add_parser("evaluate", help="Compare alerts on held-out sessions and synthetic anomaly injections.")
     evaluate.add_argument("--config", type=Path, default=project_root / "config" / "default.yaml")
     evaluate.add_argument("--test-dir", type=Path)
     evaluate.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
@@ -89,7 +89,8 @@ def main() -> int:
         config = load_config(args.config)
         test_dir = args.test_dir or config["datasets"]["test_dir"]
         report = evaluate_directory(test_dir, args.model_dir, args.output_dir, args.work_dir)
-        print(f"evaluated {report['window_count']} test windows; report: {args.output_dir / 'evaluation.json'}")
+        print(f"evaluated {report['control_session_count']} clean controls and injected copies; "
+              f"report: {args.output_dir / 'evaluation.json'}")
     elif args.command == "serve":
         import uvicorn
         uvicorn.run("src.aep_anomaly.api:app", host=args.host, port=args.port, reload=False)

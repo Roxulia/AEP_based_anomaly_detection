@@ -10,20 +10,21 @@ from .route_normalizer import RouteNormalizer
 from .state_types import EventState, StateDescription, StateId
 
 
-STATE_ENCODING_VERSION = 4
+STATE_ENCODING_VERSION = 5
 
 
 class EventEncoder:
     """Create stable opaque state IDs and separate human-readable descriptions."""
 
     VALID_FIELDS = ("method", "url_group", "status_category")
+    DEFAULT_FIELDS = ("url_group", "status_category")
 
     def __init__(self, route_normalizer: RouteNormalizer | None = None,
                  route_grouper: RouteGrouper | None = None,
                  fields: tuple[str, ...] | list[str] | None = None) -> None:
         self.route_normalizer = route_normalizer or RouteNormalizer()
         self.route_grouper = route_grouper or RouteGrouper()
-        self.fields = tuple(self.VALID_FIELDS if fields is None else fields)
+        self.fields = tuple(self.DEFAULT_FIELDS if fields is None else fields)
         if not self.fields or len(set(self.fields)) != len(self.fields) or any(
                 field not in self.VALID_FIELDS for field in self.fields):
             raise ValueError(f"state fields must be a non-empty unique subset of {self.VALID_FIELDS}")

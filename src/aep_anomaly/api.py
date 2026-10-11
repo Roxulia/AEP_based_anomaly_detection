@@ -54,7 +54,11 @@ def summary() -> dict:
     if model_path.is_file():
         import json
         document = json.loads(model_path.read_text(encoding="utf-8"))
-        model_summary = {"entropy_rate": document["markov"].get("entropy_rate_bits"),
+        model_type = document.get("model_type", "markov")
+        markov_payload = document.get("markov") or {}
+        model_summary = {"model_type": model_type,
+                         "entropy_rate": document.get(
+                             "entropy_reference_bits", markov_payload.get("entropy_rate_bits")),
                          "aep_threshold": document.get("aep_threshold"),
                          "density_threshold": document.get("density_threshold"),
                          "sequence_settings": document.get("config", {}).get("window", {}),
@@ -81,7 +85,7 @@ def summary() -> dict:
             with timeline_path.open("r", encoding="utf-8") as stream:
                 for line in stream:
                     row = json.loads(line)
-                    if row.get("scorable", True):
+                    if row.get("evaluation_group", "clean_control") == "clean_control" and row.get("scorable", True):
                         score_timeline.append({key: row.get(key) for key in
                                                ("window_id", "start_time", "information_score",
                                                 "entropy_rate", "final_anomalous")})
@@ -89,7 +93,11 @@ def summary() -> dict:
                     "top_routes": [{"route": key, "count": value} for key, value in route_counts.most_common(8)],
                     "status_counts": dict(status_counts), "score_timeline": score_timeline[-30:]}
     return {
-        "detector_description": "First-order Markov + AEP + information-score density",
+        "detector_description": (
+            "Independent URL/status marginals + AEP + information-score density"
+            if model_summary.get("model_type") == "independent_marginals" else
+            "First-order Markov + AEP + information-score density"
+        ),
         "model_available": (MODEL_DIR / "model.json").is_file(),
         "model": model_summary,
         "evaluation": evaluation,

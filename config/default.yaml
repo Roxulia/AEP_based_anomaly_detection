@@ -361,24 +361,35 @@ curation:
     - storage.local.upload
 window:
   type: ip_session
-  size: 20
+  size: 50
   include_partial: true
   timeout_seconds: 60
   min_events: 3
   missing_ip: unknown
 state:
-  # Select which request attributes define a Markov state.
-  fields: [method, url_group]
+  # A request outcome is one paired state: URL group plus its status category.
+  fields: [url_group, status_category]
 markov:
+  # Set false to score independent URL and status marginals (no transitions,
+  # no joint URL/status probabilities).
+  enabled: true
   smoothing: 0.5
 aep:
-  quantile: 0.99
+  quantile: 0.8
 density:
   bandwidth: scott
   epsilon: 1.0e-12
-  quantile: 0.99
+  quantile: 0.8
 detector:
   mode: hybrid
+evaluation:
+  injections:
+    route_scan:
+      paths: [/.env, /etc/passwd, /.aws/credentials, /admin, /wp-admin]
+      status: 404
+    api_failure:
+      status: 500
+      count: 3
 
 
 

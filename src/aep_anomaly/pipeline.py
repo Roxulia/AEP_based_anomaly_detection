@@ -7,7 +7,7 @@ import csv
 import os
 import tempfile
 import pickle
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +17,7 @@ from .aep import AEPDetector
 from .density import InformationScoreDensity
 from .event_encoder import EventEncoder, STATE_ENCODING_VERSION
 from .curation import curate_event_csv, exclude_event_csv
+from .independent import IndependentMarginalModel
 from .markov import MarkovModel
 from .route_preprocessor import ensure_state_ids_csv
 from .windowing import EventWindow, load_windows
@@ -44,12 +45,17 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "window": {"type": "ip_session", "size": 50, "include_partial": True,
                 "timeout_seconds": 60, "min_events": 1, "missing_ip": "unknown"},
-    "state": {"fields": ["method", "url_group", "status_category"]},
+    "state": {"fields": ["url_group", "status_category"]},
     "split": {"training": 0.65, "validation": 0.15, "testing": 0.20},
-    "markov": {"smoothing": 0.5},
+    "markov": {"enabled": True, "smoothing": 0.5},
     "aep": {"quantile": 0.99},
     "density": {"bandwidth": "scott", "epsilon": 1e-12, "quantile": 0.99},
     "detector": {"mode": "hybrid"},
+    "evaluation": {"injections": {
+        "route_scan": {"paths": ["/.env", "/etc/passwd", "/.aws/credentials", "/admin", "/wp-admin"],
+                       "status": 404},
+        "api_failure": {"status": 500, "count": 3},
+    }},
 }
 
 
@@ -84,10 +90,87 @@ def _validate_config(config: dict[str, Any]) -> None:
         raise ValueError("missing_ip group must not be empty")
     if config["detector"]["mode"] not in {"aep", "density", "hybrid"}:
         raise ValueError("detector mode must be aep, density, or hybrid")
+    markov = config.get("markov", {})
+    if not isinstance(markov.get("enabled", True), bool):
+        raise ValueError("markov.enabled must be true or false")
+    if float(markov.get("smoothing", 0.5)) <= 0:
+        raise ValueError("markov.smoothing must be greater than zero")
+    if not markov.get("enabled", True) and not {"url_group", "status_category"}.issubset(fields):
+        raise ValueError("independent request scoring requires url_group and status_category fields")
+    injections = config.get("evaluation", {}).get("injections", {})
+    scan = injections.get("route_scan", {})
+    if not isinstance(scan.get("paths", []), list) or any(not str(path).strip() for path in scan.get("paths", [])):
+        raise ValueError("evaluation route_scan paths must be a list of non-empty paths")
+    api_failure = injections.get("api_failure", {})
+    if int(api_failure.get("count", 1)) < 1:
+        raise ValueError("evaluation api_failure count must be positive")
 
 
 def _scores(model: MarkovModel, windows: tuple[EventWindow, ...] | list[EventWindow]) -> list[float]:
     return [model.score_sequence(window.states).information_score for window in windows]
+
+
+def _normal_partition_csv(event_csv: str | Path, output_dir: str | Path,
+                          curation_settings: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
+    """Apply explicit exclusions and the same request allowlist to a partition."""
+    destination = Path(output_dir)
+    settings = dict(curation_settings)
+    settings.setdefault("exclude_paths", DEFAULT_CONFIG["curation"]["exclude_paths"])
+    settings.setdefault("exclude_route_names", [])
+    filtered_path = destination / "scoring_route_events.csv"
+    excluded = exclude_event_csv(event_csv, filtered_path, settings)
+    details: dict[str, Any] = {"excluded": excluded}
+    if settings.get("enabled", False):
+        curated = curate_event_csv(filtered_path, destination / "curated", settings)
+        details["curation"] = curated
+        return Path(curated["outputs"]["normal"]), details
+    return filtered_path, details
+
+
+def _label_value(window: EventWindow) -> bool | None:
+    """Return an upload-window label only when every request has one."""
+    values = []
+    for event in window.events:
+        raw = next((event[key] for key in ("is_anomaly", "label", "ground_truth")
+                    if event.get(key, "") != ""), None)
+        if raw is None:
+            return None
+        values.append(str(raw).strip().lower() in {"1", "true", "yes", "anomaly", "abnormal"})
+    return any(values) if values else None
+
+
+def _binary_metrics(labels: list[bool], scores: list[float], decisions: list[bool]) -> dict[str, Any]:
+    """Keep optional label metrics for ad hoc uploaded-log experiments."""
+    tp = sum(y and p for y, p in zip(labels, decisions))
+    tn = sum((not y) and (not p) for y, p in zip(labels, decisions))
+    fp = sum((not y) and p for y, p in zip(labels, decisions))
+    fn = sum(y and (not p) for y, p in zip(labels, decisions))
+    positives, negatives = tp + fn, tn + fp
+    ranked = sorted(zip(scores, labels), key=lambda item: item[0], reverse=True)
+    auc = None
+    if positives and negatives:
+        concordant = sum(1.0 if ps > ns else 0.5 if ps == ns else 0.0
+                         for ps, pl in ranked for ns, nl in ranked if pl and not nl)
+        auc = concordant / (positives * negatives)
+    pr_auc = None
+    if positives:
+        seen_pos = 0
+        precision_sum = 0.0
+        for index, (_, label) in enumerate(ranked, start=1):
+            if label:
+                seen_pos += 1
+                precision_sum += seen_pos / index
+        pr_auc = precision_sum / positives
+    return {
+        "available": True, "windows": len(labels), "true_positive": tp, "true_negative": tn,
+        "false_positive": fp, "false_negative": fn,
+        "precision": tp / (tp + fp) if tp + fp else 0.0,
+        "recall": tp / positives if positives else 0.0,
+        "f1": 2 * tp / (2 * tp + fp + fn) if 2 * tp + fp + fn else 0.0,
+        "false_positive_rate": fp / negatives if negatives else None,
+        "false_negative_rate": fn / positives if positives else None,
+        "roc_auc": auc, "pr_auc": pr_auc,
+    }
 
 
 def _record_experiment(record: dict[str, Any]) -> None:
@@ -203,40 +286,50 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     curation_settings = settings.get("curation", {"enabled": False})
     curation_settings.setdefault("exclude_paths", DEFAULT_CONFIG["curation"]["exclude_paths"])
     curation_settings.setdefault("exclude_route_names", [])
-    for dataset in (train_data, validation_data):
-        filtered = exclude_event_csv(dataset["event_csv"],
-                                     Path(dataset["event_csv"]).with_name("scoring_route_events.csv"),
-                                     curation_settings)
-        dataset["event_csv"] = str(Path(dataset["event_csv"]).with_name("scoring_route_events.csv"))
-        dataset["preprocessed"]["processed_rows"] = filtered["processed_rows"]
-        dataset["preprocessed"]["skipped_rows"] += filtered["skipped_rows"]
-        dataset["preprocessed"]["skipped_by_reason"].update(filtered["skipped_by_reason"])
-    if curation_settings.get("enabled", False):
-        train_data["curation"] = curate_event_csv(
-            train_data["event_csv"], scratch / "Train" / "curated", curation_settings)
-        train_data["event_csv"] = train_data["curation"]["outputs"]["normal"]
+    for name, dataset in (("Train", train_data), ("Validate", validation_data)):
+        normal_csv, filtering = _normal_partition_csv(
+            dataset["event_csv"], scratch / name / "filtered", curation_settings)
+        dataset["event_csv"] = str(normal_csv)
+        excluded = filtering["excluded"]
+        dataset["preprocessed"]["processed_rows"] = excluded["processed_rows"]
+        dataset["preprocessed"]["skipped_rows"] += excluded["skipped_rows"]
+        dataset["preprocessed"]["skipped_by_reason"].update(excluded["skipped_by_reason"])
+        if "curation" in filtering:
+            dataset["curation"] = filtering["curation"]
+            review_count = filtering["curation"].get("counts", {}).get("review", 0)
+            dataset["preprocessed"]["skipped_rows"] += review_count
+            if review_count:
+                dataset["preprocessed"]["skipped_by_reason"][
+                    "endpoint_not_in_application_allowlist"] = review_count
     train_windows = load_windows(train_data["event_csv"], **settings["window"])
     validation_windows = load_windows(validation_data["event_csv"], **settings["window"])
     if not train_windows or not validation_windows:
         raise ValueError("Train and Validate must each contain enough valid requests to form windows")
 
-    model = MarkovModel(smoothing=float(settings["markov"]["smoothing"])).fit(
-        window.states for window in train_windows
-    )
-    train_scores = _scores(model, train_windows)
-    validation_scores: list[float] = []
-    unscorable_validation = 0
-    for window in validation_windows:
-        try:
-            validation_scores.append(model.score_sequence(window.states).information_score)
-        except ValueError as exc:
-            if "not observed during fit" not in str(exc):
-                raise
-            unscorable_validation += 1
+    use_markov = bool(settings["markov"].get("enabled", True))
+    if use_markov:
+        model: MarkovModel | IndependentMarginalModel = MarkovModel(
+            smoothing=float(settings["markov"]["smoothing"])
+        ).fit(window.states for window in train_windows)
+        entropy_reference = model.entropy_rate_bits
+        train_scores = _scores(model, train_windows)
+        validation_scores = [model.score_sequence(window.states).information_score
+                             for window in validation_windows]
+        unscorable_validation = 0
+    else:
+        model = IndependentMarginalModel(smoothing=float(settings["markov"]["smoothing"])).fit(
+            window.events for window in train_windows
+        )
+        entropy_reference = model.entropy_bits_per_request
+        train_scores = [model.score_events(window.events).information_score
+                        for window in train_windows]
+        validation_scores = [model.score_events(window.events).information_score
+                             for window in validation_windows]
+        unscorable_validation = 0
     if not validation_scores:
-        raise ValueError("validation data has no windows containing only states seen in Train")
+        raise ValueError("Validate has no scorable sessions")
     aep = AEPDetector(quantile=float(settings["aep"]["quantile"]))
-    aep_threshold = aep.fit_threshold(validation_scores, model.entropy_rate_bits)
+    aep_threshold = aep.fit_threshold(validation_scores, entropy_reference)
     density = InformationScoreDensity(**settings["density"]).fit(train_scores)
     density_threshold = density.fit_threshold(validation_scores)
     destination = Path(model_dir)
@@ -246,13 +339,22 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
         "state_encoding": {"version": STATE_ENCODING_VERSION,
                            "id_format": "sha256-canonical-state-description",
                            "catalog_fields": state_fields},
-        "unknown_state_policy": "map_to_reserved_unk_and_report_novelty",
+        "unknown_state_policy": (
+            "map_to_reserved_unk_and_report_novelty" if use_markov else
+            "map_unseen_url_and_status_marginals_independently_to_reserved_unk"
+        ),
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "description": "Fitted statistical anomaly detector (Markov, AEP, information-score KDE)",
+        "description": ("Fitted statistical anomaly detector (Markov, AEP, information-score KDE)"
+                        if use_markov else
+                        "Fitted independent URL/status marginal detector (AEP, information-score KDE)"),
+        "model_type": "markov" if use_markov else "independent_marginals",
         "config": settings,
-        "markov": model.to_dict(),
-        "state_catalog": _load_state_catalog(train_data["event_csv"]),
-        "state_ids": list(model.states),
+        "markov": model.to_dict() if use_markov else None,
+        "independent_marginals": model.to_dict() if not use_markov else None,
+        "entropy_reference_bits": entropy_reference,
+        "state_catalog": (_load_state_catalog(train_data["event_csv"])
+                          if use_markov else {}),
+        "state_ids": list(model.states) if use_markov else [],
         "aep_threshold": aep_threshold,
         "density_threshold": density_threshold,
         "dataset_folders": {"train": str(train_root), "validate": str(validate_root)},
@@ -272,105 +374,142 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     return summary
 
 
-def _label_value(window: EventWindow) -> bool | None:
-    """Return a window label only when every request carries an explicit label."""
-    values = []
-    for event in window.events:
-        raw = next((event[key] for key in ("is_anomaly", "label", "ground_truth")
-                    if event.get(key, "") != ""), None)
-        if raw is None:
-            return None
-        values.append(str(raw).strip().lower() in {"1", "true", "yes", "anomaly", "abnormal"})
-    return any(values) if values else None
+def _append_injected_events(window: EventWindow, injections: list[dict[str, str]],
+                            encoder: EventEncoder) -> EventWindow:
+    """Create a scored copy of one control session with synthetic events appended."""
+    events = list(window.events)
+    states = list(window.states)
+    descriptions = list(window.state_descriptions)
+    last_time = datetime.fromisoformat(window.end_time.replace("Z", "+00:00"))
+    if last_time.tzinfo is None:
+        last_time = last_time.replace(tzinfo=timezone.utc)
+    for index, source in enumerate(injections, start=1):
+        event = dict(source)
+        timestamp = last_time + timedelta(seconds=index)
+        event["timestamp"] = timestamp.isoformat()
+        event["ip"] = window.client_ip
+        state_id, description = encoder.encode_with_description(
+            event.get("method"), event.get("normalized_uri") or event.get("uri"), event.get("status"))
+        event["state_id"] = state_id
+        event["state_description"] = json.dumps(description, ensure_ascii=False, sort_keys=True)
+        events.append(event)
+        states.append(state_id)
+        descriptions.append(description)
+    return EventWindow(window_id=window.window_id, start_time=window.start_time,
+                       end_time=events[-1]["timestamp"], events=tuple(events),
+                       states=tuple(states), client_ip=window.client_ip,
+                       state_descriptions=tuple(descriptions))
 
 
-def _binary_metrics(labels: list[bool], scores: list[float], decisions: list[bool]) -> dict[str, Any]:
-    tp = sum(y and p for y, p in zip(labels, decisions))
-    tn = sum((not y) and (not p) for y, p in zip(labels, decisions))
-    fp = sum((not y) and p for y, p in zip(labels, decisions))
-    fn = sum(y and (not p) for y, p in zip(labels, decisions))
-    positives, negatives = tp + fn, tn + fp
-    ranked = sorted(zip(scores, labels), key=lambda item: item[0], reverse=True)
-    auc = None
-    if positives and negatives:
-        concordant = sum(1.0 if ps > ns else 0.5 if ps == ns else 0.0
-                         for ps, pl in ranked for ns, nl in ranked if pl and not nl)
-        auc = concordant / (positives * negatives)
-    pr_auc = None
-    if positives:
-        seen_pos = 0
-        precision_sum = 0.0
-        for index, (_, label) in enumerate(ranked, start=1):
-            if label:
-                seen_pos += 1
-                precision_sum += seen_pos / index
-        pr_auc = precision_sum / positives
-    return {
-        "available": True, "windows": len(labels), "true_positive": tp, "true_negative": tn,
-        "false_positive": fp, "false_negative": fn,
-        "precision": tp / (tp + fp) if tp + fp else 0.0,
-        "recall": tp / positives if positives else 0.0,
-        "f1": 2 * tp / (2 * tp + fp + fn) if 2 * tp + fp + fn else 0.0,
-        "false_positive_rate": fp / negatives if negatives else None,
-        "false_negative_rate": fn / positives if positives else None,
-        "roc_auc": auc, "pr_auc": pr_auc,
-    }
+def _evaluation_cases(windows: list[EventWindow], config: dict[str, Any]) -> dict[str, list[tuple[str, EventWindow]]]:
+    """Return untouched controls and deterministic, request-level injection copies."""
+    if not windows:
+        raise ValueError("no allowlisted Test sessions are available as clean evaluation controls")
+    encoder = EventEncoder(fields=config["state"]["fields"])
+    injections = config.get("evaluation", {}).get("injections", {})
+    cases: dict[str, list[tuple[str, EventWindow]]] = {
+        "clean_control": [("clean", window) for window in windows]}
+    scan_settings = injections.get("route_scan", {})
+    scan_paths = [str(path).strip() for path in scan_settings.get("paths", []) if str(path).strip()]
+    if scan_paths:
+        scan_status = int(scan_settings.get("status", 404))
+        scan_events = []
+        for path in scan_paths:
+            normalized = encoder.route_normalizer.normalize(path)
+            scan_events.append({"method": "GET", "uri": path, "normalized_uri": normalized,
+                                "status": str(scan_status), "status_class": encoder.status_class(scan_status),
+                                "url_group": encoder.route_grouper.group(normalized),
+                                "source_file": "synthetic-injection", "synthetic_kind": "route_scan"})
+        cases["route_scan"] = [
+            ("route_scan", _append_injected_events(window, scan_events, encoder))
+            for window in windows
+        ]
+
+    api_settings = injections.get("api_failure", {})
+    api_status = int(api_settings.get("status", 500))
+    api_count = int(api_settings.get("count", 1))
+    api_route: tuple[str, str] | None = None
+    for window in windows:
+        for event in window.events:
+            path = str(event.get("normalized_uri") or event.get("uri") or "")
+            if path.startswith("/api/"):
+                api_route = (path, str(event.get("method") or "GET"))
+                break
+        if api_route:
+            break
+    if api_route is None:
+        for route in config.get("curation", {}).get("application_routes", []):
+            path = str(route.get("path", ""))
+            if path.startswith("/api/") and path not in config.get("curation", {}).get("exclude_paths", []):
+                api_route = (path, "GET")
+                break
+    if api_count > 0:
+        if api_route is None:
+            raise ValueError("API-failure injection needs a known /api/ route in Test or the application allowlist")
+        path, method = api_route
+        normalized = encoder.route_normalizer.normalize(path)
+        api_events = [{"method": method, "uri": path, "normalized_uri": normalized,
+                       "status": str(api_status), "status_class": encoder.status_class(api_status),
+                       "url_group": encoder.route_grouper.group(normalized),
+                       "source_file": "synthetic-injection", "synthetic_kind": "api_failure"}
+                      for _ in range(api_count)]
+        cases["api_failure"] = [
+            ("api_failure", _append_injected_events(window, api_events, encoder))
+            for window in windows
+        ]
+    return cases
 
 
 def evaluate_event_csv(event_csv: str | Path, model_dir: str | Path,
                        output_dir: str | Path) -> dict[str, Any]:
-    """Evaluate the saved detector on a separate dataset without fitting or tuning."""
+    """Compare alerts on held-out normal controls and controlled injection copies."""
     detector = TrainedDetector(model_dir)
-    prepared_csv = ensure_state_ids_csv(event_csv, Path(output_dir) / "prepared" / "state_events.csv",
-                                        detector.metadata["config"]["state"]["fields"])
-    windows = load_windows(prepared_csv, **detector.metadata["config"]["window"])
-    results: dict[str, Any] = {}
     output_root = Path(output_dir)
     output_root.mkdir(parents=True, exist_ok=True)
+    prepared_csv = ensure_state_ids_csv(event_csv, output_root / "prepared" / "state_events.csv",
+                                        detector.metadata["config"]["state"]["fields"])
+    config = detector.metadata["config"]
+    normal_csv, filtering = _normal_partition_csv(
+        prepared_csv, output_root / "prepared" / "evaluation_filter",
+        config.get("curation", {"enabled": False}))
+    windows = load_windows(normal_csv, **config["window"])
+    cases = _evaluation_cases(windows, config)
+    results: dict[str, Any] = {}
     all_rows: dict[str, list[dict[str, Any]]] = {mode: [] for mode in ("aep", "density", "hybrid")}
-    for mode in all_rows:
-        for window in windows:
-            try:
-                all_rows[mode].append(detector.score(window, mode=mode))
-            except ValueError as exc:
-                if "not observed during fit" not in str(exc):
-                    raise
-                all_rows[mode].append({"window_id": window.window_id,
-                                       "start_time": window.start_time, "end_time": window.end_time,
-                                       "event_count": len(window.events), "scorable": False,
-                                       "final_anomalous": None, "unscorable_reason": str(exc)})
-        rows = all_rows[mode]
-        labels = [_label_value(window) for window in windows]
-        scorable = [(label, row) for label, row in zip(labels, rows)
-                    if label is not None and row.get("scorable", True)]
-        if scorable:
-            metrics = _binary_metrics([item[0] for item in scorable],
-                                      [item[1]["density_score"] if mode == "density"
-                                       else item[1]["aep_deviation"] if mode == "aep"
-                                       else max(item[1]["aep_deviation"] / max(detector.aep.threshold or 0.0, 1e-12),
-                                                item[1]["density_score"] / max(detector.density.threshold or 0.0, 1e-12))
-                                       for item in scorable],
-                                      [bool(item[1]["final_anomalous"]) for item in scorable])
-        else:
-            metrics = {"available": False, "reason": "No usable ground-truth labels in test windows."}
-        results[mode] = {"windows": len(windows),
-                         "scorable_windows": sum(row.get("scorable", True) for row in rows),
-                         "unscorable_windows": sum(not row.get("scorable", True) for row in rows),
-                         "anomalous_windows": sum(row.get("final_anomalous") is True for row in rows),
-                         "metrics": metrics}
+    for mode, mode_rows in all_rows.items():
+        mode_summary: dict[str, Any] = {}
+        for case_name, case_windows in cases.items():
+            scored: list[dict[str, Any]] = []
+            for injection_type, window in case_windows:
+                row = detector.score(window, mode=mode)
+                row.update({"evaluation_group": case_name, "injection_type": injection_type,
+                            "control_window_id": window.window_id})
+                scored.append(row)
+                mode_rows.append(row)
+            alert_count = sum(row["final_anomalous"] is True for row in scored)
+            mode_summary[case_name] = {"sessions": len(scored), "alerted_sessions": alert_count,
+                                       "alert_rate": alert_count / len(scored) if scored else None}
+        mode_summary["injected_sessions"] = {
+            name: summary for name, summary in mode_summary.items() if name != "clean_control"}
+        mode_summary["clean_control"] = mode_summary.pop("clean_control")
+        results[mode] = mode_summary
         with (output_root / f"{mode}.jsonl").open("w", encoding="utf-8") as stream:
-            stream.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
+            stream.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in mode_rows)
     report = {"detector_description": detector.metadata.get("description", "Statistical anomaly detector"),
+              "model_type": detector.model_type,
               "model_dir": str(Path(model_dir).resolve()),
               "model_created_at": detector.metadata.get("created_at"),
-              "test_event_csv": str(prepared_csv), "window_count": len(windows),
-              "sequence_settings": detector.metadata["config"]["window"], "comparisons": results}
+              "test_event_csv": str(normal_csv), "control_session_count": len(windows),
+              "window_count": len(windows),
+              "sequence_settings": config["window"],
+              "evaluation_method": "allowlisted held-out controls with synthetic scan/API-failure copies",
+              "filtering": filtering, "comparisons": results}
     (output_root / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     _record_experiment({"type": "evaluation", "timestamp": datetime.now(timezone.utc).isoformat(),
                         "model_dir": str(Path(model_dir).resolve()),
                         "model_created_at": detector.metadata.get("created_at"),
                         "dataset": str(Path(event_csv).resolve()),
-                        "parameters": detector.metadata.get("config", {}), "result": report})
+                        "parameters": config, "result": report})
     return report
 
 
@@ -382,15 +521,21 @@ def evaluate_directory(test_dir: str | Path, model_dir: str | Path,
     scratch = Path(work_dir) if work_dir else Path(output_dir) / "prepared"
     detector = TrainedDetector(model_dir)
     prepared = prepare_log_directory(test_root, scratch, detector.metadata["config"]["state"]["fields"])
-    curation = detector.metadata.get("config", {}).get("curation", {})
-    curation.setdefault("exclude_paths", DEFAULT_CONFIG["curation"]["exclude_paths"])
-    filtered_path = Path(prepared["event_csv"]).with_name("scoring_route_events.csv")
-    filtered = exclude_event_csv(prepared["event_csv"], filtered_path, curation)
-    prepared["event_csv"] = str(filtered_path)
-    prepared["preprocessed"]["processed_rows"] = filtered["processed_rows"]
-    prepared["preprocessed"]["skipped_rows"] += filtered["skipped_rows"]
-    prepared["preprocessed"]["skipped_by_reason"].update(filtered["skipped_by_reason"])
     report = evaluate_event_csv(prepared["event_csv"], model_dir, output_dir)
+    prepared["event_csv"] = report["test_event_csv"]
+    with Path(prepared["event_csv"]).open("r", encoding="utf-8-sig", newline="") as stream:
+        prepared["preprocessed"]["processed_rows"] = sum(1 for _ in csv.DictReader(stream))
+    filtering = report.get("filtering", {})
+    excluded = filtering.get("excluded", {})
+    prepared["preprocessed"]["skipped_rows"] += excluded.get("skipped_rows", 0)
+    prepared["preprocessed"]["skipped_by_reason"].update(excluded.get("skipped_by_reason", {}))
+    curation = filtering.get("curation", {})
+    if curation:
+        review_count = curation.get("counts", {}).get("review", 0)
+        prepared["preprocessed"]["skipped_rows"] += review_count
+        if review_count:
+            skipped = prepared["preprocessed"]["skipped_by_reason"]
+            skipped["endpoint_not_in_application_allowlist"] = review_count
     report["test_data"] = prepared
     (Path(output_dir) / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     return report
@@ -500,7 +645,7 @@ def analyze_uploaded_log(uploaded_path: str | Path, model_dir: str | Path) -> di
 
 def train_model(event_csv: str | Path, model_dir: str | Path,
                 config: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Chronologically split events, curate Train only, then fit and persist artifacts."""
+    """Chronologically split events, curate Train and Validate, then fit artifacts."""
     settings = config or load_config()
     _validate_config(settings)
     state_csv = ensure_state_ids_csv(event_csv, Path(model_dir).parent / "prepared" / "training_state_events.csv",
@@ -512,22 +657,34 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
         split_settings["training"], split_settings["validation"], split_settings["testing"],
     )
     train_csv, validation_csv, testing_csv = partitions
-    if settings.get("curation", {}).get("enabled", False):
-        curated = curate_event_csv(train_csv, Path(model_dir).parent / "prepared" / "curated",
-                                   settings["curation"])
-        train_csv = Path(curated["outputs"]["normal"])
+    prep_root = Path(model_dir).parent / "prepared"
+    curation_settings = settings.get("curation", {"enabled": False})
+    train_csv, _ = _normal_partition_csv(train_csv, prep_root / "training", curation_settings)
+    validation_csv, _ = _normal_partition_csv(validation_csv, prep_root / "validation", curation_settings)
     training_windows = load_windows(train_csv, **settings["window"])
     validation_windows = load_windows(validation_csv, **settings["window"])
     testing_windows = load_windows(testing_csv, **settings["window"])
     if not training_windows or not validation_windows or not testing_windows:
         raise ValueError("Train, Validate, and Test must each contain enough valid requests to form windows")
-    model = MarkovModel(smoothing=float(settings["markov"]["smoothing"])).fit(
-        window.states for window in training_windows
-    )
-    train_scores = _scores(model, training_windows)
-    validation_scores = _scores(model, validation_windows)
+    use_markov = bool(settings["markov"].get("enabled", True))
+    if use_markov:
+        model: MarkovModel | IndependentMarginalModel = MarkovModel(
+            smoothing=float(settings["markov"]["smoothing"])
+        ).fit(window.states for window in training_windows)
+        entropy_reference = model.entropy_rate_bits
+        train_scores = _scores(model, training_windows)
+        validation_scores = _scores(model, validation_windows)
+    else:
+        model = IndependentMarginalModel(smoothing=float(settings["markov"]["smoothing"])).fit(
+            window.events for window in training_windows
+        )
+        entropy_reference = model.entropy_bits_per_request
+        train_scores = [model.score_events(window.events).information_score
+                        for window in training_windows]
+        validation_scores = [model.score_events(window.events).information_score
+                             for window in validation_windows]
     aep = AEPDetector(quantile=float(settings["aep"]["quantile"]))
-    aep_threshold = aep.fit_threshold(validation_scores, model.entropy_rate_bits)
+    aep_threshold = aep.fit_threshold(validation_scores, entropy_reference)
     density = InformationScoreDensity(**settings["density"]).fit(train_scores)
     density_threshold = density.fit_threshold(validation_scores)
     destination = Path(model_dir)
@@ -537,12 +694,22 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
         "state_encoding": {"version": STATE_ENCODING_VERSION,
                            "id_format": "sha256-canonical-state-description",
                            "catalog_fields": settings["state"]["fields"]},
-        "unknown_state_policy": "map_to_reserved_unk_and_report_novelty",
+        "unknown_state_policy": (
+            "map_to_reserved_unk_and_report_novelty" if use_markov else
+            "map_unseen_url_and_status_marginals_independently_to_reserved_unk"
+        ),
         "created_at": datetime.now(timezone.utc).isoformat(),
+        "model_type": "markov" if use_markov else "independent_marginals",
+        "description": ("Fitted statistical anomaly detector (Markov, AEP, information-score KDE)"
+                        if use_markov else
+                        "Fitted independent URL/status marginal detector (AEP, information-score KDE)"),
         "config": settings,
-        "markov": model.to_dict(),
-        "state_catalog": _load_state_catalog(train_csv, set(model.states)),
-        "state_ids": list(model.states),
+        "markov": model.to_dict() if use_markov else None,
+        "independent_marginals": model.to_dict() if not use_markov else None,
+        "entropy_reference_bits": entropy_reference,
+        "state_catalog": (_load_state_catalog(train_csv, set(model.states))
+                          if use_markov else {}),
+        "state_ids": list(model.states) if use_markov else [],
         "aep_threshold": aep_threshold,
         "density_threshold": density_threshold,
         "split_windows": {"training": len(training_windows), "validation": len(validation_windows),
@@ -573,8 +740,20 @@ class TrainedDetector:
             raise ValueError("model uses a different state encoding; rebuild it with the current pipeline")
         self.metadata.setdefault("config", {}).setdefault(
             "state", {"fields": self.metadata.get("state_encoding", {}).get(
-                "catalog_fields", list(EventEncoder.VALID_FIELDS))})
-        self.model = MarkovModel.from_dict(self.metadata["markov"])
+                "catalog_fields", list(EventEncoder.DEFAULT_FIELDS))})
+        self.model_type = self.metadata.get("model_type", "markov")
+        if self.model_type == "markov":
+            self.model: MarkovModel | IndependentMarginalModel = MarkovModel.from_dict(
+                self.metadata["markov"])
+            self.entropy_reference_bits = self.model.entropy_rate_bits
+        elif self.model_type == "independent_marginals":
+            payload = self.metadata.get("independent_marginals")
+            if not isinstance(payload, dict):
+                raise ValueError("independent marginal model bundle is missing its probability tables")
+            self.model = IndependentMarginalModel.from_dict(payload)
+            self.entropy_reference_bits = self.model.entropy_bits_per_request
+        else:
+            raise ValueError(f"unsupported probability model type: {self.model_type}")
         with (root / "density.pkl").open("rb") as stream:
             self.density: InformationScoreDensity = pickle.load(stream)
         self.aep = AEPDetector(quantile=self.metadata["config"]["aep"]["quantile"])
@@ -583,9 +762,38 @@ class TrainedDetector:
         self.mode = self.metadata["config"]["detector"]["mode"]
 
     def score(self, window: EventWindow, mode: str | None = None) -> dict[str, Any]:
-        markov_score = self.model.score_sequence(window.states)
-        aep_score = self.aep.score(markov_score.information_score, self.model.entropy_rate_bits)
-        density_score = self.density.score(markov_score.information_score)
+        independent_score = None
+        markov_score = None
+        if self.model_type == "markov":
+            assert isinstance(self.model, MarkovModel)
+            markov_score = self.model.score_sequence(window.states)
+            information_score = markov_score.information_score
+            log_probability = markov_score.log_probability_bits
+            initial_probability = markov_score.initial_probability
+            scored_states: list[Any] = list(markov_score.scored_states)
+            unknown_indices = list(markov_score.unknown_state_indices)
+            unknown_url_indices: list[int] = []
+            unknown_status_indices: list[int] = []
+            transition_probabilities = list(markov_score.transition_probabilities)
+            least_probable_transitions = [
+                {"from_state": item.from_state, "to_state": item.to_state,
+                 "probability": item.probability}
+                for item in markov_score.least_probable_transitions
+            ]
+        else:
+            assert isinstance(self.model, IndependentMarginalModel)
+            independent_score = self.model.score_events(window.events)
+            information_score = independent_score.information_score
+            log_probability = independent_score.log_probability_bits
+            initial_probability = independent_score.initial_probability
+            scored_states = []
+            unknown_url_indices = list(independent_score.unknown_url_indices)
+            unknown_status_indices = list(independent_score.unknown_status_indices)
+            unknown_indices = sorted(set(unknown_url_indices) | set(unknown_status_indices))
+            transition_probabilities = []
+            least_probable_transitions = []
+        aep_score = self.aep.score(information_score, self.entropy_reference_bits)
+        density_score = self.density.score(information_score)
         selected_mode = mode or self.mode
         if selected_mode not in {"aep", "density", "hybrid"}:
             raise ValueError("mode must be aep, density, or hybrid")
@@ -597,16 +805,23 @@ class TrainedDetector:
             final = aep_score.anomalous or bool(density_score.anomalous)
         reasons = []
         if selected_mode in {"aep", "hybrid"} and aep_score.anomalous:
-            reasons.append("normalized information score deviates from the learned entropy rate")
+            reasons.append("normalized information score deviates from the learned entropy reference")
         if selected_mode in {"density", "hybrid"} and density_score.anomalous:
             reasons.append("information score lies beyond the validation density threshold")
-        unknown_events = [
-            {"event_index": index, "original_state_id": window.states[index],
-             "state_description": (window.state_descriptions[index]
-                                   if index < len(window.state_descriptions) else {}),
-             "event": window.events[index]}
-            for index in markov_score.unknown_state_indices
-        ]
+        unknown_events = []
+        for index in unknown_indices:
+            item = {
+                "event_index": index,
+                "state_description": (window.state_descriptions[index]
+                                      if index < len(window.state_descriptions) else {}),
+                "event": window.events[index],
+            }
+            if markov_score is not None:
+                item["original_state_id"] = window.states[index]
+            else:
+                item["unknown_url_group"] = index in unknown_url_indices
+                item["unknown_status_category"] = index in unknown_status_indices
+            unknown_events.append(item)
         return {
             "window_id": window.window_id, "start_time": window.start_time, "end_time": window.end_time,
             "client_ip": window.client_ip,
@@ -616,13 +831,16 @@ class TrainedDetector:
                                    or (window.state_descriptions[index]
                                        if index < len(window.state_descriptions) else {})
                                    for index, state in enumerate(window.states)],
-            "scored_states": list(markov_score.scored_states),
+            "scoring_model": self.model_type,
+            "scored_states": scored_states,
             "novelty_detected": bool(unknown_events), "unknown_state_count": len(unknown_events),
+            "unknown_url_group_count": len(unknown_url_indices),
+            "unknown_status_category_count": len(unknown_status_indices),
             "unknown_state_events": unknown_events,
-            "log_probability": markov_score.log_probability_bits,
-            "initial_probability": markov_score.initial_probability,
-            "information_score": markov_score.information_score,
-            "entropy_rate": self.model.entropy_rate_bits,
+            "log_probability": log_probability,
+            "initial_probability": initial_probability,
+            "information_score": information_score,
+            "entropy_rate": self.entropy_reference_bits,
             "aep_deviation": aep_score.aep_deviation, "aep_threshold": self.aep.threshold,
             "aep_anomalous": aep_score.anomalous, "density": density_score.density,
             "density_score": density_score.anomaly_score,
@@ -630,13 +848,12 @@ class TrainedDetector:
             "density_anomalous": density_score.anomalous, "final_anomalous": final,
             "anomaly_reasons": reasons if final else [],
             "detector_mode": selected_mode,
-            "transition_probabilities": list(markov_score.transition_probabilities),
-            "least_probable_transitions": [
-                {"from_state": item.from_state,
-                 "to_state": item.to_state,
-                 "probability": item.probability}
-                for item in markov_score.least_probable_transitions
-            ],
+            "transition_probabilities": transition_probabilities,
+            "least_probable_transitions": least_probable_transitions,
+            "url_surprisal_bits": (list(independent_score.url_surprisal_bits)
+                                    if independent_score is not None else []),
+            "status_surprisal_bits": (list(independent_score.status_surprisal_bits)
+                                      if independent_score is not None else []),
         }
 
 
