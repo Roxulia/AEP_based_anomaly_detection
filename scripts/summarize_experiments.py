@@ -36,7 +36,10 @@ def summarize(history_path: Path, output_path: Path, mode: str, metric: str) -> 
         for evaluation in items:
             comparison = evaluation.get("result", {}).get("comparisons", {}).get(mode, {})
             if metric == "clean_alert_rate":
-                score = comparison.get("clean_control", {}).get("alert_rate")
+                score = comparison.get("session_alert_rate")
+            elif metric in {"precision", "recall", "f1", "false_positive_rate",
+                            "false_negative_rate", "roc_auc", "pr_auc"}:
+                score = comparison.get("metrics", {}).get(metric)
             elif metric in {"route_scan_detection_rate", "api_failure_detection_rate"}:
                 injection = metric.removesuffix("_detection_rate")
                 score = comparison.get("injected_sessions", {}).get(injection, {}).get("alert_rate")
@@ -75,8 +78,8 @@ def main() -> int:
     parser.add_argument("--history", type=Path, default=Path("reports/experiment_history.jsonl"))
     parser.add_argument("--output", type=Path, default=Path("reports/experiment_summary.csv"))
     parser.add_argument("--mode", choices=("aep", "density", "hybrid"), default="hybrid")
-    parser.add_argument("--metric", default="route_scan_detection_rate",
-                        help="evaluation metric (route_scan_detection_rate, api_failure_detection_rate, clean_alert_rate)")
+    parser.add_argument("--metric", default="f1",
+                        help="evaluation metric (f1, precision, recall, roc_auc, pr_auc, false_positive_rate)")
     args = parser.parse_args()
     count = summarize(args.history, args.output, args.mode, args.metric)
     print(f"wrote {count} evaluation rows to {args.output}")

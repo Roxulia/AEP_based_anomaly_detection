@@ -1,0 +1,754 @@
+[2026-10-02 00:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 00:00:02] local.INFO: Service operation completed. {"operation":"App\\Services\\PlatformModule\\TenantServices\\TenantLicenseService::checkExpire"} 
+[2026-10-02 00:00:02] local.INFO: Service operation completed. {"operation":"App\\Services\\PlatformModule\\TenantServices\\TenantLicenseService::sendExpiringSoonNotifications"} 
+[2026-10-02 00:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\CheckExpireTenantLicenseJob::handle"} 
+[2026-10-02 00:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 00:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 00:01:56] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 00:05:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:10:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 00:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 00:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 00:20:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:25:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 00:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 00:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 00:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\SummarizeMonthlyFinancialMovementsJob::handle"} 
+[2026-10-02 00:35:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:35:13] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 00:35:16] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 00:40:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 00:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 00:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 00:50:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 00:53:07] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 00:53:09] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 00:53:09] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 00:53:09] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 00:53:09] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 00:53:09] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 00:53:31] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 00:55:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 01:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 01:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 01:05:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:10:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 01:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 01:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 01:17:36] local.INFO: Service entry operation completed. {"operation":"\\Illuminate\\Routing\\RedirectController"} 
+[2026-10-02 01:17:36] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\Admin\\AdminDashboardController@index"} 
+[2026-10-02 01:17:36] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@showAdminLogin"} 
+[2026-10-02 01:17:42] local.INFO: Service entry operation completed. {"operation":"\\Illuminate\\Routing\\RedirectController"} 
+[2026-10-02 01:17:43] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\Admin\\AdminDashboardController@index"} 
+[2026-10-02 01:17:43] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@showAdminLogin"} 
+[2026-10-02 01:17:54] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@loginAdmin"} 
+[2026-10-02 01:17:54] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\Admin\\AdminDashboardController@index"} 
+[2026-10-02 01:18:00] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\Admin\\AdminExchangeRateController@index"} 
+[2026-10-02 01:18:14] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\Admin\\AdminExchangeRateController@store"} 
+[2026-10-02 01:18:14] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\Admin\\AdminExchangeRateController@index"} 
+[2026-10-02 01:18:45] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\Admin\\AdminExchangeRateController@store"} 
+[2026-10-02 01:18:45] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\Admin\\AdminExchangeRateController@index"} 
+[2026-10-02 01:19:00] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@logoutAdmin"} 
+[2026-10-02 01:19:00] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@showAdminLogin"} 
+[2026-10-02 01:20:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:20:40] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 01:25:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 01:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 01:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 01:35:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:40:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:42:45] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 01:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 01:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 01:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 01:48:49] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 01:50:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:55:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 01:57:32] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 02:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 02:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 02:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 02:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\PurgeExpiredTenantUserNotificationsJob::handle"} 
+[2026-10-02 02:02:00] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 02:05:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:05:10] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 02:05:11] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 02:05:11] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 02:05:11] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 02:05:11] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 02:05:12] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 02:10:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 02:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 02:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 02:20:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:25:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:28:49] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 02:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 02:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 02:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 02:35:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:40:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 02:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 02:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 02:50:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 02:51:41] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 02:55:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 03:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 03:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 03:05:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:09:56] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 03:10:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 03:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 03:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 03:15:52] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 03:20:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:25:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:29:34] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 03:29:38] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 03:29:40] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 03:29:44] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 03:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 03:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 03:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 03:35:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:40:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 03:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 03:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 03:50:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 03:53:29] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 03:55:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 04:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 04:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 04:05:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:10:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 04:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 04:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 04:20:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:25:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 04:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 04:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 04:35:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:40:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 04:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 04:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 04:50:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:55:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 04:59:24] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 05:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 05:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 05:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 05:05:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:10:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 05:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 05:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 05:20:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:25:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 05:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 05:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 05:35:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:40:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 05:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 05:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 05:47:58] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 05:50:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 05:53:50] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 05:53:52] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 05:55:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 06:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 06:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 06:01:29] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 06:05:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:07:37] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 06:07:59] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 06:10:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:15:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 06:15:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:15:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 06:15:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 06:20:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:25:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:28:57] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 06:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 06:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 06:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 06:35:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:40:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 06:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 06:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 06:50:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 06:55:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 07:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 07:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 07:01:02] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\AppCompatibilityController@show"} 
+[2026-10-02 07:01:02] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\TenantController@resolveTenant"} 
+[2026-10-02 07:01:04] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\AuthController@me"} 
+[2026-10-02 07:01:12] local.INFO: Service entry operation completed. {"operation":"Laravel\\Sanctum\\Http\\Controllers\\CsrfCookieController@show"} 
+[2026-10-02 07:01:13] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\AuthController@loginSubdomainSpa"} 
+[2026-10-02 07:01:15] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\TenantController@resolveTenant"} 
+[2026-10-02 07:01:16] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\TenantUserNotificationController@index"} 
+[2026-10-02 07:01:16] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\DefaultDataController@getMaterialTypes"} 
+[2026-10-02 07:01:16] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\TenantDashboardController@summary"} 
+[2026-10-02 07:01:20] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\TenantDebtController@index"} 
+[2026-10-02 07:01:22] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\Accounting\\MultiAccountManagement@index"} 
+[2026-10-02 07:01:22] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\FinancialUnitController@index"} 
+[2026-10-02 07:01:22] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\Accounting\\MultiAccountManagement@index"} 
+[2026-10-02 07:01:22] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\DefaultDataController@getInterestTypes"} 
+[2026-10-02 07:01:22] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\Accounting\\MultiAccountManagement@index"} 
+[2026-10-02 07:01:30] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\TenantCustomerController@index"} 
+[2026-10-02 07:01:30] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\TenantCustomerController@index"} 
+[2026-10-02 07:01:45] local.INFO: Service entry operation completed. {"operation":"Laravel\\Sanctum\\Http\\Controllers\\CsrfCookieController@show"} 
+[2026-10-02 07:01:45] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\TenantDebtController@store"} 
+[2026-10-02 07:01:46] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\TenantDebtController@index"} 
+[2026-10-02 07:01:48] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\Accounting\\MultiAccountManagement@index"} 
+[2026-10-02 07:01:48] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\DefaultDataController@getInterestTypes"} 
+[2026-10-02 07:01:49] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\TenantModule\\Accounting\\MultiAccountManagement@index"} 
+[2026-10-02 07:05:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:10:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 07:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 07:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 07:20:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:25:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:27:41] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 07:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 07:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 07:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 07:35:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:40:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 07:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 07:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 07:50:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 07:55:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 08:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 08:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 08:05:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:10:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 08:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 08:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 08:20:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:25:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 08:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 08:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 08:35:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:40:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 08:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 08:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 08:50:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:55:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 08:58:20] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 08:58:21] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 09:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 09:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 09:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 09:05:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:10:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 09:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 09:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 09:20:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:25:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 09:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 09:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 09:35:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:40:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 09:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 09:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 09:50:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:55:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 09:58:16] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 10:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 10:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 10:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 10:05:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:10:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 10:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 10:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 10:20:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:25:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 10:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 10:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 10:35:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:40:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:41:54] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 10:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 10:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 10:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 10:50:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 10:54:58] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 10:55:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 11:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 11:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 11:05:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:10:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:11:57] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:11:59] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:12:00] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:12:00] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 11:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 11:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 11:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 11:17:31] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 11:20:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:25:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 11:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 11:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 11:35:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:40:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:44:45] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 11:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 11:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 11:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 11:48:33] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 11:48:34] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@showRegister"} 
+[2026-10-02 11:50:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 11:55:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 12:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 12:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 12:05:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:10:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 12:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 12:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 12:16:11] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 12:20:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:25:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 12:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 12:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 12:35:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:40:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 12:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 12:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 12:50:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:53:34] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@showUserLogin"} 
+[2026-10-02 12:55:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 12:58:33] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 13:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 13:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 13:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 13:05:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:10:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 13:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 13:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 13:20:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:25:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 13:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 13:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 13:35:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:40:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 13:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 13:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 13:50:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 13:55:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 14:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 14:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 14:05:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:09:29] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 14:10:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 14:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 14:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 14:20:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:24:10] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 14:25:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:26:48] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 14:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 14:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 14:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 14:35:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:40:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 14:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 14:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 14:50:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:55:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 14:55:57] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 15:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 15:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 15:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 15:05:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:10:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:14:36] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 15:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 15:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 15:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 15:20:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:21:02] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 15:25:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 15:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 15:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 15:31:56] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 15:32:33] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 15:32:34] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@showRegister"} 
+[2026-10-02 15:32:35] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@showUserLogin"} 
+[2026-10-02 15:32:36] local.INFO: Service entry operation completed. {"operation":"App\\Http\\Controllers\\PlatformModule\\AuthController@showForgotPassword"} 
+[2026-10-02 15:35:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:40:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 15:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 15:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 15:50:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 15:55:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 16:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 16:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 16:05:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:10:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 16:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 16:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 16:20:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:25:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 16:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 16:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 16:35:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:40:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 16:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 16:45:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 16:50:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:55:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 16:58:51] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 17:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 17:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 17:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 17:05:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:10:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 17:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 17:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 17:20:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:25:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:30:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 17:30:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:30:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 17:30:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 17:35:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:40:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:43:30] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 17:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 17:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 17:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 17:50:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 17:50:11] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 17:55:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 18:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 18:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 18:05:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:06:16] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 18:06:42] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 18:10:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:12:51] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 18:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 18:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 18:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 18:20:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:21:49] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 18:25:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 18:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 18:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 18:35:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:40:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 18:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 18:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 18:50:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 18:55:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 19:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 19:00:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 19:03:08] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 19:05:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:10:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 19:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 19:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 19:20:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:23:51] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 19:25:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 19:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 19:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 19:35:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:40:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 19:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 19:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 19:47:10] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 19:50:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:51:04] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 19:51:06] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 19:55:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 19:55:13] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 20:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 20:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 20:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 20:05:05] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:10:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 20:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 20:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 20:20:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:25:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 20:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 20:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 20:32:09] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 20:35:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:40:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 20:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 20:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 20:50:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 20:52:43] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 20:55:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 21:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 21:00:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 21:00:26] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 21:05:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:10:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 21:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 21:15:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 21:20:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:25:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 21:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 21:30:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 21:31:22] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 21:35:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:40:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 21:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 21:45:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 21:50:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 21:55:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 22:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 22:00:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 22:05:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:10:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:13:45] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 22:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 22:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 22:15:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 22:20:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:25:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 22:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 22:30:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 22:35:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:40:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 22:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 22:45:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 22:47:45] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 22:47:47] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 22:48:53] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 22:50:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 22:55:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 23:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 23:00:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 23:05:01] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:10:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 23:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 23:15:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 23:20:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:25:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:25:16] local.INFO: Service entry operation completed. {"operation":"Closure"} 
+[2026-10-02 23:25:34] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 23:25:35] local.INFO: Service entry operation completed. {"operation":null} 
+[2026-10-02 23:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 23:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 23:30:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 23:35:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:40:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessDuePawnInterestCompoundingJob::handle"} 
+[2026-10-02 23:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessAccountingDaysJob::handle"} 
+[2026-10-02 23:45:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ProcessScheduledExpensesJob::handle"} 
+[2026-10-02 23:50:04] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:55:02] local.INFO: Service operation completed. {"operation":"App\\Jobs\\ExpireInactiveTenantUsersJob::handle"} 
+[2026-10-02 23:59:03] local.INFO: Service operation completed. {"operation":"App\\Jobs\\CheckExpirePawnLoanContractSlipJob::handle"} 

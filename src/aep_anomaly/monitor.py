@@ -16,6 +16,15 @@ from .route_preprocessor import RoutePreprocessor
 from .windowing import EventWindow
 
 
+def _ensure_alert_updated_at(db: sqlite3.Connection) -> None:
+    columns = {row[1] for row in db.execute("PRAGMA table_info(alerts)")}
+    if not columns:
+        return
+    if "updated_at" not in columns:
+        db.execute("ALTER TABLE alerts ADD COLUMN updated_at TEXT")
+    db.execute("UPDATE alerts SET updated_at=created_at WHERE updated_at IS NULL")
+
+
 class LogFolderMonitor:
     """Poll route logs, score inactive per-IP sessions, and persist alerts."""
 
@@ -66,6 +75,7 @@ class LogFolderMonitor:
         with sqlite3.connect(self.database) as db:
             db.execute("CREATE TABLE IF NOT EXISTS files (file_id TEXT PRIMARY KEY, path TEXT NOT NULL, offset INTEGER NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS alerts (id INTEGER PRIMARY KEY AUTOINCREMENT, created_at TEXT NOT NULL, payload TEXT NOT NULL, acknowledged INTEGER NOT NULL DEFAULT 0)")
+            _ensure_alert_updated_at(db)
             db.execute("CREATE TABLE IF NOT EXISTS skipped_lines (id INTEGER PRIMARY KEY AUTOINCREMENT, source_file TEXT NOT NULL, byte_offset INTEGER NOT NULL, parse_status TEXT NOT NULL, raw_line TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS monitor_state (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
             db.execute("CREATE TABLE IF NOT EXISTS sessions (ip TEXT PRIMARY KEY, last_timestamp TEXT NOT NULL, events_json TEXT NOT NULL, window_id INTEGER NOT NULL)")
@@ -75,7 +85,7 @@ class LogFolderMonitor:
             excluded_rows = 0
             scored_sessions = 0
 
-            def resolve_alert(ip: str, latest: dict[str, Any] | None = None) -> None:
+            def resolve_alert(ip: str) -> None:
                 active = db.execute("SELECT alert_id FROM live_alerts WHERE ip=?", (ip,)).fetchone()
                 if active is None:
                     return
@@ -83,11 +93,8 @@ class LogFolderMonitor:
                 if row:
                     payload = json.loads(row[0])
                     payload["resolved"] = True
-                    if latest is not None:
-                        payload.update(latest)
-                        payload["resolved"] = True
-                    db.execute("UPDATE alerts SET payload=?, acknowledged=1 WHERE id=?",
-                               (json.dumps(payload, ensure_ascii=False), active[0]))
+                    db.execute("UPDATE alerts SET payload=?, acknowledged=1, updated_at=? WHERE id=?",
+                               (json.dumps(payload, ensure_ascii=False), datetime.now(timezone.utc).isoformat(), active[0]))
                 db.execute("DELETE FROM live_alerts WHERE ip=?", (ip,))
 
             def process_event(event: dict[str, Any]) -> None:
@@ -136,17 +143,19 @@ class LogFolderMonitor:
                 scored_sessions += 1
                 active = db.execute("SELECT alert_id FROM live_alerts WHERE ip=?", (ip,)).fetchone()
                 if result.get("final_anomalous") is True:
+                    update_at = datetime.now(timezone.utc).isoformat()
+                    result["updated_at"] = update_at
                     if active:
-                        db.execute("UPDATE alerts SET created_at=?,payload=?,acknowledged=0 WHERE id=?",
-                                   (datetime.now(timezone.utc).isoformat(),
-                                    json.dumps(result, ensure_ascii=False), active[0]))
+                        db.execute("UPDATE alerts SET payload=?,acknowledged=0,updated_at=? WHERE id=?",
+                                   (json.dumps(result, ensure_ascii=False), update_at, active[0]))
                     else:
-                        cursor = db.execute("INSERT INTO alerts(created_at,payload,acknowledged) VALUES(?,?,0)",
-                                            (datetime.now(timezone.utc).isoformat(),
-                                             json.dumps(result, ensure_ascii=False)))
+                        created_at = datetime.now(timezone.utc).isoformat()
+                        result["updated_at"] = created_at
+                        cursor = db.execute("INSERT INTO alerts(created_at,payload,acknowledged,updated_at) VALUES(?,?,0,?)",
+                                            (created_at, json.dumps(result, ensure_ascii=False), created_at))
                         db.execute("INSERT INTO live_alerts(ip,alert_id) VALUES(?,?)", (ip, cursor.lastrowid))
-                elif active:
-                    resolve_alert(ip, result)
+                # Keep this alert attached to the session until that session ends.
+                # A later anomalous score in the same session updates this same row.
             for path in sorted(self.watch_dir.glob("routes-*.log"), key=lambda item: item.name.lower()):
                 stat = path.stat()
                 identity = f"{stat.st_dev}:{stat.st_ino}"
@@ -224,11 +233,14 @@ class LogFolderMonitor:
             return []
         with sqlite3.connect(self.database) as db:
             try:
-                rows = db.execute("SELECT id,created_at,payload,acknowledged FROM alerts ORDER BY id DESC LIMIT ?",
+                _ensure_alert_updated_at(db)
+                rows = db.execute("SELECT id,created_at,payload,acknowledged,updated_at FROM alerts "
+                                  "ORDER BY COALESCE(updated_at,created_at) DESC,id DESC LIMIT ?",
                                   (max(1, min(int(limit), 1000)),)).fetchall()
             except sqlite3.OperationalError:
                 return []
-        return [{"id": row[0], "created_at": row[1], "acknowledged": bool(row[3]), **json.loads(row[2])}
+        return [{**json.loads(row[2]), "id": row[0], "created_at": row[1],
+                 "updated_at": row[4] or row[1], "acknowledged": bool(row[3])}
                 for row in rows]
 
     def acknowledge(self, alert_id: int) -> bool:
@@ -236,7 +248,9 @@ class LogFolderMonitor:
             return False
         with sqlite3.connect(self.database) as db:
             try:
-                cursor = db.execute("UPDATE alerts SET acknowledged=1 WHERE id=?", (int(alert_id),))
+                _ensure_alert_updated_at(db)
+                cursor = db.execute("UPDATE alerts SET acknowledged=1,updated_at=? WHERE id=?",
+                                    (datetime.now(timezone.utc).isoformat(), int(alert_id)))
                 db.commit()
             except sqlite3.OperationalError:
                 return False

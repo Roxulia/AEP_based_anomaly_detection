@@ -42,7 +42,7 @@ def main() -> int:
     build.add_argument("--validate-dir", type=Path)
     build.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
     build.add_argument("--work-dir", type=Path)
-    evaluate = commands.add_parser("evaluate", help="Compare alerts on held-out sessions and synthetic anomaly injections.")
+    evaluate = commands.add_parser("evaluate", help="Evaluate held-out sessions using route allowlist labels.")
     evaluate.add_argument("--config", type=Path, default=project_root / "config" / "default.yaml")
     evaluate.add_argument("--test-dir", type=Path)
     evaluate.add_argument("--model-dir", type=Path, default=project_root / "models" / "default")
@@ -69,7 +69,9 @@ def main() -> int:
         prepared = prepare_log_directory(args.input_dir, args.output_dir,
                                          config["state"]["fields"])
         result = curate_event_csv(prepared["event_csv"], args.output_dir / "curated",
-                                  config.get("curation", {}))
+                                  {**config.get("curation", {}),
+                                   "session_timeout_seconds": config["window"].get("timeout_seconds", 60),
+                                   "missing_ip": config["window"].get("missing_ip", "unknown")})
         counts = result.get("counts", {})
         print(f"curated {sum(counts.values())} events: {counts}; manifest: {result.get('manifest_path')}")
     elif args.command == "train":
@@ -89,8 +91,13 @@ def main() -> int:
         config = load_config(args.config)
         test_dir = args.test_dir or config["datasets"]["test_dir"]
         report = evaluate_directory(test_dir, args.model_dir, args.output_dir, args.work_dir)
-        print(f"evaluated {report['control_session_count']} clean controls and injected copies; "
-              f"report: {args.output_dir / 'evaluation.json'}")
+        print("Evaluation scores (session based)")
+        print(f"{'Method':<10} {'Anomaly catch rate':>20} {'False alarms':>14} {'Final score':>14}")
+        for mode in ("aep", "density", "hybrid"):
+            metrics = report["comparisons"][mode]["metrics"]
+            print(f"{mode.upper():<10} {metrics['anomaly_catch_rate']:>19.1%} "
+                  f"{metrics['false_alarms']:>14} {metrics['final_score']:>13.1%}")
+        print(f"Full report saved to: {args.output_dir / 'evaluation.json'}")
     elif args.command == "serve":
         import uvicorn
         uvicorn.run("src.aep_anomaly.api:app", host=args.host, port=args.port, reload=False)

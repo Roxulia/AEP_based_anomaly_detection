@@ -7,7 +7,8 @@ import csv
 import os
 import tempfile
 import pickle
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,8 @@ import yaml
 from .aep import AEPDetector
 from .density import InformationScoreDensity
 from .event_encoder import EventEncoder, STATE_ENCODING_VERSION
-from .curation import curate_event_csv, exclude_event_csv
+from .curation import (curate_event_csv, exclude_event_csv,
+                       is_allowlisted_application_route)
 from .independent import IndependentMarginalModel
 from .markov import MarkovModel
 from .route_preprocessor import ensure_state_ids_csv
@@ -32,6 +34,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
     "curation": {
         "enabled": True,
+        "session_control": False,
         "exclude_paths": ["/api/app/compatibility"],
         "exclude_route_names": [],
         "application_routes": [
@@ -51,11 +54,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "aep": {"quantile": 0.99},
     "density": {"bandwidth": "scott", "epsilon": 1e-12, "quantile": 0.99},
     "detector": {"mode": "hybrid"},
-    "evaluation": {"injections": {
-        "route_scan": {"paths": ["/.env", "/etc/passwd", "/.aws/credentials", "/admin", "/wp-admin"],
-                       "status": 404},
-        "api_failure": {"status": 500, "count": 3},
-    }},
+    "evaluation": {"counting_unit": "session"},
 }
 
 
@@ -76,6 +75,8 @@ def load_config(path: str | Path | None = None) -> dict[str, Any]:
 
 
 def _validate_config(config: dict[str, Any]) -> None:
+    if not isinstance(config.get("curation", {}).get("session_control", False), bool):
+        raise ValueError("curation.session_control must be true or false")
     fields = config.get("state", {}).get("fields")
     valid_fields = EventEncoder.VALID_FIELDS
     if not isinstance(fields, list) or not fields or len(set(fields)) != len(fields) or any(
@@ -97,13 +98,8 @@ def _validate_config(config: dict[str, Any]) -> None:
         raise ValueError("markov.smoothing must be greater than zero")
     if not markov.get("enabled", True) and not {"url_group", "status_category"}.issubset(fields):
         raise ValueError("independent request scoring requires url_group and status_category fields")
-    injections = config.get("evaluation", {}).get("injections", {})
-    scan = injections.get("route_scan", {})
-    if not isinstance(scan.get("paths", []), list) or any(not str(path).strip() for path in scan.get("paths", [])):
-        raise ValueError("evaluation route_scan paths must be a list of non-empty paths")
-    api_failure = injections.get("api_failure", {})
-    if int(api_failure.get("count", 1)) < 1:
-        raise ValueError("evaluation api_failure count must be positive")
+    if config.get("evaluation", {}).get("counting_unit", "session") not in {"session", "request"}:
+        raise ValueError("evaluation.counting_unit must be 'session' or 'request'")
 
 
 def _scores(model: MarkovModel, windows: tuple[EventWindow, ...] | list[EventWindow]) -> list[float]:
@@ -111,12 +107,16 @@ def _scores(model: MarkovModel, windows: tuple[EventWindow, ...] | list[EventWin
 
 
 def _normal_partition_csv(event_csv: str | Path, output_dir: str | Path,
-                          curation_settings: dict[str, Any]) -> tuple[Path, dict[str, Any]]:
+                          curation_settings: dict[str, Any],
+                          window_settings: dict[str, Any] | None = None) -> tuple[Path, dict[str, Any]]:
     """Apply explicit exclusions and the same request allowlist to a partition."""
     destination = Path(output_dir)
     settings = dict(curation_settings)
     settings.setdefault("exclude_paths", DEFAULT_CONFIG["curation"]["exclude_paths"])
     settings.setdefault("exclude_route_names", [])
+    if window_settings:
+        settings.setdefault("session_timeout_seconds", window_settings.get("timeout_seconds", 60))
+        settings.setdefault("missing_ip", window_settings.get("missing_ip", "unknown"))
     filtered_path = destination / "scoring_route_events.csv"
     excluded = exclude_event_csv(event_csv, filtered_path, settings)
     details: dict[str, Any] = {"excluded": excluded}
@@ -146,6 +146,8 @@ def _binary_metrics(labels: list[bool], scores: list[float], decisions: list[boo
     fp = sum((not y) and p for y, p in zip(labels, decisions))
     fn = sum(y and (not p) for y, p in zip(labels, decisions))
     positives, negatives = tp + fn, tn + fp
+    anomaly_catch_rate = tp / positives if positives else 0.0
+    false_alarm_rate = fp / negatives if negatives else None
     ranked = sorted(zip(scores, labels), key=lambda item: item[0], reverse=True)
     auc = None
     if positives and negatives:
@@ -164,6 +166,12 @@ def _binary_metrics(labels: list[bool], scores: list[float], decisions: list[boo
     return {
         "available": True, "windows": len(labels), "true_positive": tp, "true_negative": tn,
         "false_positive": fp, "false_negative": fn,
+        "total_anomalies": positives,
+        "anomaly_catch_rate": anomaly_catch_rate,
+        "false_alarms": fp,
+        "false_alarm_rate": false_alarm_rate,
+        "final_score": tp / (positives + fp) if positives + fp else 0.0,
+        "final_score_formula": "true_positive / (total_anomalies + false_alarms)",
         "precision": tp / (tp + fp) if tp + fp else 0.0,
         "recall": tp / positives if positives else 0.0,
         "f1": 2 * tp / (2 * tp + fp + fn) if 2 * tp + fp + fn else 0.0,
@@ -288,7 +296,8 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     curation_settings.setdefault("exclude_route_names", [])
     for name, dataset in (("Train", train_data), ("Validate", validation_data)):
         normal_csv, filtering = _normal_partition_csv(
-            dataset["event_csv"], scratch / name / "filtered", curation_settings)
+            dataset["event_csv"], scratch / name / "filtered", curation_settings,
+            settings["window"])
         dataset["event_csv"] = str(normal_csv)
         excluded = filtering["excluded"]
         dataset["preprocessed"]["processed_rows"] = excluded["processed_rows"]
@@ -299,8 +308,12 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
             review_count = filtering["curation"].get("counts", {}).get("review", 0)
             dataset["preprocessed"]["skipped_rows"] += review_count
             if review_count:
-                dataset["preprocessed"]["skipped_by_reason"][
-                    "endpoint_not_in_application_allowlist"] = review_count
+                decisions_path = filtering["curation"].get("decisions_csv")
+                if decisions_path:
+                    with Path(decisions_path).open("r", encoding="utf-8-sig", newline="") as stream:
+                        reasons = Counter(row["reason"] for row in csv.DictReader(stream)
+                                          if row["classification"] == "review")
+                    dataset["preprocessed"]["skipped_by_reason"].update(reasons)
     train_windows = load_windows(train_data["event_csv"], **settings["window"])
     validation_windows = load_windows(validation_data["event_csv"], **settings["window"])
     if not train_windows or not validation_windows:
@@ -374,136 +387,85 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
     return summary
 
 
-def _append_injected_events(window: EventWindow, injections: list[dict[str, str]],
-                            encoder: EventEncoder) -> EventWindow:
-    """Create a scored copy of one control session with synthetic events appended."""
-    events = list(window.events)
-    states = list(window.states)
-    descriptions = list(window.state_descriptions)
-    last_time = datetime.fromisoformat(window.end_time.replace("Z", "+00:00"))
-    if last_time.tzinfo is None:
-        last_time = last_time.replace(tzinfo=timezone.utc)
-    for index, source in enumerate(injections, start=1):
-        event = dict(source)
-        timestamp = last_time + timedelta(seconds=index)
-        event["timestamp"] = timestamp.isoformat()
-        event["ip"] = window.client_ip
-        state_id, description = encoder.encode_with_description(
-            event.get("method"), event.get("normalized_uri") or event.get("uri"), event.get("status"))
-        event["state_id"] = state_id
-        event["state_description"] = json.dumps(description, ensure_ascii=False, sort_keys=True)
-        events.append(event)
-        states.append(state_id)
-        descriptions.append(description)
-    return EventWindow(window_id=window.window_id, start_time=window.start_time,
-                       end_time=events[-1]["timestamp"], events=tuple(events),
-                       states=tuple(states), client_ip=window.client_ip,
-                       state_descriptions=tuple(descriptions))
-
-
-def _evaluation_cases(windows: list[EventWindow], config: dict[str, Any]) -> dict[str, list[tuple[str, EventWindow]]]:
-    """Return untouched controls and deterministic, request-level injection copies."""
-    if not windows:
-        raise ValueError("no allowlisted Test sessions are available as clean evaluation controls")
-    encoder = EventEncoder(fields=config["state"]["fields"])
-    injections = config.get("evaluation", {}).get("injections", {})
-    cases: dict[str, list[tuple[str, EventWindow]]] = {
-        "clean_control": [("clean", window) for window in windows]}
-    scan_settings = injections.get("route_scan", {})
-    scan_paths = [str(path).strip() for path in scan_settings.get("paths", []) if str(path).strip()]
-    if scan_paths:
-        scan_status = int(scan_settings.get("status", 404))
-        scan_events = []
-        for path in scan_paths:
-            normalized = encoder.route_normalizer.normalize(path)
-            scan_events.append({"method": "GET", "uri": path, "normalized_uri": normalized,
-                                "status": str(scan_status), "status_class": encoder.status_class(scan_status),
-                                "url_group": encoder.route_grouper.group(normalized),
-                                "source_file": "synthetic-injection", "synthetic_kind": "route_scan"})
-        cases["route_scan"] = [
-            ("route_scan", _append_injected_events(window, scan_events, encoder))
-            for window in windows
-        ]
-
-    api_settings = injections.get("api_failure", {})
-    api_status = int(api_settings.get("status", 500))
-    api_count = int(api_settings.get("count", 1))
-    api_route: tuple[str, str] | None = None
-    for window in windows:
-        for event in window.events:
-            path = str(event.get("normalized_uri") or event.get("uri") or "")
-            if path.startswith("/api/"):
-                api_route = (path, str(event.get("method") or "GET"))
-                break
-        if api_route:
-            break
-    if api_route is None:
-        for route in config.get("curation", {}).get("application_routes", []):
-            path = str(route.get("path", ""))
-            if path.startswith("/api/") and path not in config.get("curation", {}).get("exclude_paths", []):
-                api_route = (path, "GET")
-                break
-    if api_count > 0:
-        if api_route is None:
-            raise ValueError("API-failure injection needs a known /api/ route in Test or the application allowlist")
-        path, method = api_route
-        normalized = encoder.route_normalizer.normalize(path)
-        api_events = [{"method": method, "uri": path, "normalized_uri": normalized,
-                       "status": str(api_status), "status_class": encoder.status_class(api_status),
-                       "url_group": encoder.route_grouper.group(normalized),
-                       "source_file": "synthetic-injection", "synthetic_kind": "api_failure"}
-                      for _ in range(api_count)]
-        cases["api_failure"] = [
-            ("api_failure", _append_injected_events(window, api_events, encoder))
-            for window in windows
-        ]
-    return cases
-
-
 def evaluate_event_csv(event_csv: str | Path, model_dir: str | Path,
                        output_dir: str | Path) -> dict[str, Any]:
-    """Compare alerts on held-out normal controls and controlled injection copies."""
+    """Evaluate original held-out sessions using allowlist violations as labels."""
     detector = TrainedDetector(model_dir)
     output_root = Path(output_dir)
     output_root.mkdir(parents=True, exist_ok=True)
     prepared_csv = ensure_state_ids_csv(event_csv, output_root / "prepared" / "state_events.csv",
                                         detector.metadata["config"]["state"]["fields"])
     config = detector.metadata["config"]
-    normal_csv, filtering = _normal_partition_csv(
-        prepared_csv, output_root / "prepared" / "evaluation_filter",
-        config.get("curation", {"enabled": False}))
-    windows = load_windows(normal_csv, **config["window"])
-    cases = _evaluation_cases(windows, config)
+    # Keep all Test events so allowlist violations remain visible and can be
+    # used as evaluation labels. Curation applies to fitting/calibration only.
+    windows = load_windows(prepared_csv, **config["window"])
+    if not windows:
+        raise ValueError("no Test sessions are available for evaluation")
+    curation = config.get("curation", {})
+    counting_unit = config.get("evaluation", {}).get("counting_unit", "session")
     results: dict[str, Any] = {}
-    all_rows: dict[str, list[dict[str, Any]]] = {mode: [] for mode in ("aep", "density", "hybrid")}
-    for mode, mode_rows in all_rows.items():
-        mode_summary: dict[str, Any] = {}
-        for case_name, case_windows in cases.items():
-            scored: list[dict[str, Any]] = []
-            for injection_type, window in case_windows:
-                row = detector.score(window, mode=mode)
-                row.update({"evaluation_group": case_name, "injection_type": injection_type,
-                            "control_window_id": window.window_id})
-                scored.append(row)
-                mode_rows.append(row)
-            alert_count = sum(row["final_anomalous"] is True for row in scored)
-            mode_summary[case_name] = {"sessions": len(scored), "alerted_sessions": alert_count,
-                                       "alert_rate": alert_count / len(scored) if scored else None}
-        mode_summary["injected_sessions"] = {
-            name: summary for name, summary in mode_summary.items() if name != "clean_control"}
-        mode_summary["clean_control"] = mode_summary.pop("clean_control")
-        results[mode] = mode_summary
+    for mode in ("aep", "density", "hybrid"):
+        rows: list[dict[str, Any]] = []
+        session_labels: list[bool] = []
+        session_scores: list[float] = []
+        session_decisions: list[bool] = []
+        request_labels: list[bool] = []
+        request_scores: list[float] = []
+        request_decisions: list[bool] = []
+        unallowlisted_requests = 0
+        for window in windows:
+            row = detector.score(window, mode=mode)
+            request_is_unallowlisted = [
+                not is_allowlisted_application_route(event, curation)
+                for event in window.events
+            ]
+            invalid_count = sum(request_is_unallowlisted)
+            session_label = invalid_count > 0
+            row.update({
+                "evaluation_label": "unallowlisted_route" if session_label else "allowlisted_only",
+                "session_contains_unallowlisted_route": session_label,
+                "unallowlisted_request_count": invalid_count,
+            })
+            rows.append(row)
+            session_labels.append(session_label)
+            session_decisions.append(bool(row["final_anomalous"]))
+            session_scores.append(float(row["aep_deviation"] if mode == "aep" else
+                                         row["density_score"] if mode == "density" else
+                                         max(row["aep_deviation"] / max(row["aep_threshold"], 1e-12),
+                                             row["density_score"] / max(row["density_threshold"], 1e-12))))
+            unallowlisted_requests += invalid_count
+            request_labels.extend(request_is_unallowlisted)
+            request_scores.extend([session_scores[-1]] * len(request_is_unallowlisted))
+            request_decisions.extend([session_decisions[-1]] * len(request_is_unallowlisted))
+        labels, scores, decisions = (session_labels, session_scores, session_decisions)
+        if counting_unit == "request":
+            labels, scores, decisions = request_labels, request_scores, request_decisions
+        metrics = _binary_metrics(labels, scores, decisions)
+        alerted_sessions = sum(session_decisions)
+        results[mode] = {
+            "counting_unit": counting_unit,
+            "sessions": len(windows),
+            "sessions_with_unallowlisted_routes": sum(session_labels),
+            "unallowlisted_requests": unallowlisted_requests,
+            "alerted_sessions": alerted_sessions,
+            "session_alert_rate": alerted_sessions / len(windows) if windows else None,
+            "positive_units": sum(labels),
+            "detected_positive_units": sum(label and decision for label, decision in zip(labels, decisions)),
+            "metrics": metrics,
+        }
         with (output_root / f"{mode}.jsonl").open("w", encoding="utf-8") as stream:
-            stream.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in mode_rows)
+            stream.writelines(json.dumps(row, ensure_ascii=False) + "\n" for row in rows)
     report = {"detector_description": detector.metadata.get("description", "Statistical anomaly detector"),
               "model_type": detector.model_type,
               "model_dir": str(Path(model_dir).resolve()),
               "model_created_at": detector.metadata.get("created_at"),
-              "test_event_csv": str(normal_csv), "control_session_count": len(windows),
+              "test_event_csv": str(prepared_csv), "control_session_count": len(windows),
               "window_count": len(windows),
               "sequence_settings": config["window"],
-              "evaluation_method": "allowlisted held-out controls with synthetic scan/API-failure copies",
-              "filtering": filtering, "comparisons": results}
+              "evaluation_method": "held-out Test sessions labeled by exact application route allowlist",
+              "evaluation_counting_unit": counting_unit,
+              "allowlist": curation,
+              "comparisons": results}
     (output_root / "evaluation.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     _record_experiment({"type": "evaluation", "timestamp": datetime.now(timezone.utc).isoformat(),
                         "model_dir": str(Path(model_dir).resolve()),
@@ -659,8 +621,10 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
     train_csv, validation_csv, testing_csv = partitions
     prep_root = Path(model_dir).parent / "prepared"
     curation_settings = settings.get("curation", {"enabled": False})
-    train_csv, _ = _normal_partition_csv(train_csv, prep_root / "training", curation_settings)
-    validation_csv, _ = _normal_partition_csv(validation_csv, prep_root / "validation", curation_settings)
+    train_csv, _ = _normal_partition_csv(train_csv, prep_root / "training", curation_settings,
+                                         settings["window"])
+    validation_csv, _ = _normal_partition_csv(validation_csv, prep_root / "validation", curation_settings,
+                                              settings["window"])
     training_windows = load_windows(train_csv, **settings["window"])
     validation_windows = load_windows(validation_csv, **settings["window"])
     testing_windows = load_windows(testing_csv, **settings["window"])

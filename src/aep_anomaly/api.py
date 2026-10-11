@@ -5,11 +5,14 @@ from __future__ import annotations
 import os
 import tempfile
 import csv
+import asyncio
+import json
 from collections import Counter
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from .monitor import LogFolderMonitor
 from .pipeline import (analyze_uploaded_log, evaluate_directory, load_config,
@@ -149,6 +152,27 @@ async def experiment(file: UploadFile = File(...)) -> dict:
 @app.get("/api/alerts")
 def alerts(limit: int = 200) -> list[dict]:
     return _monitor().list_alerts(limit)
+
+
+@app.get("/api/alerts/stream")
+async def stream_alerts(request: Request) -> StreamingResponse:
+    async def events():
+        seen: dict[int, str] = {}
+        yield "retry: 1500\n\n"
+        while not await request.is_disconnected():
+            for alert in reversed(_monitor().list_alerts(1000)):
+                alert_id = int(alert["id"])
+                updated_at = str(alert.get("updated_at") or alert.get("created_at") or "")
+                if seen.get(alert_id) != updated_at:
+                    seen[alert_id] = updated_at
+                    yield ("event: alert\n"
+                           f"id: {alert_id}-{updated_at}\n"
+                           f"data: {json.dumps(alert, ensure_ascii=False)}\n\n")
+            yield ": keep-alive\n\n"
+            await asyncio.sleep(0.75)
+
+    return StreamingResponse(events(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 @app.get("/api/monitor/skipped-lines")

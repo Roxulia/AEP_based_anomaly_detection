@@ -5,6 +5,9 @@
   processed_dir: Data/processed
 curation:
   enabled: true
+  # true removes a whole IP session when any request is outside the allowlist.
+  # false (default) removes only the unlisted requests.
+  session_control: false
   # Compatibility probes are application plumbing, not user request behavior.
   exclude_paths:
     - /api/app/compatibility
@@ -372,24 +375,19 @@ state:
 markov:
   # Set false to score independent URL and status marginals (no transitions,
   # no joint URL/status probabilities).
-  enabled: true
+  enabled: false
   smoothing: 0.5
 aep:
-  quantile: 0.8
+  quantile: 0.9
 density:
   bandwidth: scott
   epsilon: 1.0e-12
-  quantile: 0.8
+  quantile: 0.9
 detector:
   mode: hybrid
 evaluation:
-  injections:
-    route_scan:
-      paths: [/.env, /etc/passwd, /.aws/credentials, /admin, /wp-admin]
-      status: 404
-    api_failure:
-      status: 500
-      count: 3
+  # Count each session containing unallowlisted routes once, or count requests.
+  counting_unit: session
 
 
 

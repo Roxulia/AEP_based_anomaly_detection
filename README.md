@@ -12,7 +12,7 @@ Data/Validate/    # calibrate AEP and density thresholds
 Data/Test/        # held-out evaluation only
 ```
 
-The folder workflow does not split the folders again. Raw route logs should use the supported `routes-*.log` format. The parser preserves malformed lines in its parsed CSV and reports parsing/preprocessing counts. Before fitting or validation calibration, preprocessing applies the same exact application endpoint allowlist to Train and Validate. Allowlisted method/path pairs and route names go to `normal_route_events.csv`; each unlisted request goes to `review_route_events.csv` and is excluded from fitting/calibration until explicitly added to the allowlist. Sessions are formed from the retained requests, so a request outside the allowlist does not discard the other requests from its session. `curation_decisions.csv` and `curation_manifest.json` record the decisions. Raw logs and the uncurated prepared CSV remain unchanged. Unlisted means “not approved for normal training,” not “confirmed malicious.”
+The folder workflow does not split the folders again. Raw route logs should use the supported `routes-*.log` format. The parser preserves malformed lines in its parsed CSV and reports parsing/preprocessing counts. Before fitting or validation calibration, preprocessing applies the same exact application endpoint allowlist to Train and Validate. Allowlisted method/path pairs and route names go to `normal_route_events.csv`; unlisted requests go to `review_route_events.csv` and are excluded from fitting/calibration until explicitly added to the allowlist. Set `curation.session_control: true` to exclude every request in an IP session if any request in that session is unlisted; `false` (default) excludes only the unlisted requests. Sessions use `window.timeout_seconds` and `window.missing_ip`. `curation_decisions.csv` and `curation_manifest.json` record the decisions. Raw logs and the uncurated prepared CSV remain unchanged. Unlisted means “not approved for normal training,” not “confirmed malicious.”
 
 State dimensions are configured with `state.fields` in `config/default.yaml`. The default is `[url_group, status_category]`: one state pairs a normalized URL group with its response category, such as `route.env → not_found` or `api.tenant.orders → server_error`. Markov transitions are learned between these paired request outcomes. Training, evaluation, uploads, and live monitoring use the same saved field selection. Reprocess and rebuild after changing this setting; older model bundles are rejected when their state-encoding version differs.
 
@@ -21,7 +21,7 @@ The default `markov.enabled: true` retains first-order transition scoring. Set i
 Every successful build and evaluation appends its configuration, model identity, dataset, and result summary to `reports/experiment_history.jsonl`. Set `AEP_EXPERIMENT_LOG` to choose another history file. To compare recorded model parameters and metrics, run:
 
 ```powershell
-python scripts/summarize_experiments.py --mode hybrid --metric route_scan_detection_rate
+python scripts/summarize_experiments.py --mode hybrid --metric f1
 ```
 
 The script writes `reports/experiment_summary.csv`, ranked by the chosen metric. Use an independent selection dataset when choosing parameters; keep the final Test dataset for final reporting.
@@ -40,7 +40,7 @@ python -m src.aep_anomaly evaluate
 
 `curate` can be run independently to inspect the generated normal/review CSVs and decision manifest before fitting. The allowlist is the application inventory in `config/default.yaml`; add a route only after confirming it belongs to the application.
 
-`build` fits the statistical detector using allowlisted Train requests and calibrates thresholds from separately allowlisted Validate requests. It saves `models/default/model.json` and `models/default/density.pkl`, plus prepared CSV files under `Data/processed/`. `evaluate` uses allowlisted sessions from the separate Test folder as clean controls, then scores copies with configured route-scan and API-failure requests injected. Its report compares injected-session detection rates with alert rates on untouched controls for AEP-only, density-only, and hybrid modes. Injection paths, statuses, and API-failure burst size are configured under `evaluation.injections`.
+`build` fits the statistical detector using allowlisted Train requests and calibrates thresholds from separately allowlisted Validate requests. It saves `models/default/model.json` and `models/default/density.pkl`, plus prepared CSV files under `Data/processed/`. `evaluate` scores the original sessions in the separate Test folder and labels a request positive when it falls outside the exact application route allowlist. A session is positive when it contains at least one such request. Set `evaluation.counting_unit` to `session` (default) to count each positive session once, or `request` to count each unallowlisted request separately; session decisions are mapped to their requests in request mode. Reports compare AEP-only, density-only, and hybrid results. These allowlist-based labels are an evaluation proxy and do not establish malicious intent.
 
 Override configured folders when needed:
 
