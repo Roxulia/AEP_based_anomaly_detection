@@ -51,6 +51,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "window": {"type": "ip_session", "size": 50, "include_partial": True,
                 "timeout_seconds": 60, "min_events": 1, "missing_ip": "unknown"},
     "state": {"fields": ["url_group", "status_category"]},
+    "request_probability": {"mode": "independent", "smoothing": 0.5},
     "split": {"training": 0.65, "validation": 0.15, "testing": 0.20},
     "markov": {"enabled": True, "smoothing": 0.5},
     "aep": {"quantile": 0.99},
@@ -118,6 +119,12 @@ def _validate_config(config: dict[str, Any]) -> None:
         raise ValueError("markov.enabled must be true or false")
     if float(markov.get("smoothing", 0.5)) <= 0:
         raise ValueError("markov.smoothing must be greater than zero")
+    request_probability = config.setdefault("request_probability", {"mode": "independent"})
+    probability_mode = request_probability.get("mode", "independent")
+    if probability_mode not in IndependentMarginalModel.MODES:
+        raise ValueError("request_probability.mode must be independent, joint, or status_given_url")
+    if float(request_probability.get("smoothing", 0.5)) <= 0:
+        raise ValueError("request_probability.smoothing must be greater than zero")
     if not markov.get("enabled", True) and not {"url_group", "status_category"}.issubset(fields):
         raise ValueError("independent request scoring requires url_group and status_category fields")
     if config.get("evaluation", {}).get("counting_unit", "session") not in {"session", "request"}:
@@ -403,7 +410,8 @@ def train_from_directories(train_dir: str | Path, validate_dir: str | Path,
                              for window in validation_windows]
         unscorable_validation = 0
     else:
-        model = IndependentMarginalModel(smoothing=float(settings["markov"]["smoothing"])).fit(
+        model = IndependentMarginalModel(smoothing=float(settings["request_probability"]["smoothing"]),
+                                         mode=settings["request_probability"]["mode"]).fit(
             window.events for window in train_windows
         )
         entropy_reference = model.entropy_bits_per_request
@@ -715,7 +723,8 @@ def train_model(event_csv: str | Path, model_dir: str | Path,
         train_scores = _scores(model, training_windows)
         validation_scores = _scores(model, validation_windows)
     else:
-        model = IndependentMarginalModel(smoothing=float(settings["markov"]["smoothing"])).fit(
+        model = IndependentMarginalModel(smoothing=float(settings["request_probability"]["smoothing"]),
+                                         mode=settings["request_probability"]["mode"]).fit(
             window.events for window in training_windows
         )
         entropy_reference = model.entropy_bits_per_request

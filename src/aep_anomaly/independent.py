@@ -35,10 +35,15 @@ class IndependentMarginalModel:
     surprisal for its requests.
     """
 
-    def __init__(self, smoothing: float = 0.5) -> None:
+    MODES = {"independent", "joint", "status_given_url"}
+
+    def __init__(self, smoothing: float = 0.5, mode: str = "independent") -> None:
         if not math.isfinite(smoothing) or smoothing <= 0:
             raise ValueError("smoothing must be finite and greater than zero")
+        if mode not in self.MODES:
+            raise ValueError(f"mode must be one of {sorted(self.MODES)}")
         self.smoothing = float(smoothing)
+        self.mode = mode
         self._fitted = False
 
     @property
@@ -54,7 +59,7 @@ class IndependentMarginalModel:
     @property
     def entropy_bits_per_request(self) -> float:
         self._require_fitted()
-        return self._url_entropy_bits + self._status_entropy_bits
+        return self._entropy_bits_per_request
 
     @property
     def url_entropy_bits(self) -> float:
@@ -75,12 +80,16 @@ class IndependentMarginalModel:
         self._fitted = False
         url_counts: Counter[str] = Counter()
         status_counts: Counter[str] = Counter()
+        pair_counts: Counter[tuple[str, str]] = Counter()
+        conditional_counts: dict[str, Counter[str]] = {}
         event_count = 0
         for session in sessions:
             for event in session:
                 url_group, status_category = self._features(event)
                 url_counts[url_group] += 1
                 status_counts[status_category] += 1
+                pair_counts[(url_group, status_category)] += 1
+                conditional_counts.setdefault(url_group, Counter())[status_category] += 1
                 event_count += 1
         if event_count == 0:
             raise ValueError("at least one training request is required")
@@ -90,8 +99,29 @@ class IndependentMarginalModel:
         self._training_event_count = event_count
         self._url_probabilities = self._smoothed_probabilities(url_counts, event_count)
         self._status_probabilities = self._smoothed_probabilities(status_counts, event_count)
+        urls = set(url_counts) | {UNKNOWN_CATEGORY}
+        statuses = set(status_counts) | {UNKNOWN_CATEGORY}
+        denominator = event_count + self.smoothing * len(urls) * len(statuses)
+        self._pair_probabilities = {(url, status): (pair_counts[(url, status)] + self.smoothing) / denominator
+                                     for url in urls for status in statuses}
+        self._conditional_probabilities = {}
+        for url, counts in conditional_counts.items():
+            denominator = sum(counts.values()) + self.smoothing * len(statuses)
+            self._conditional_probabilities[url] = {
+                status: (counts[status] + self.smoothing) / denominator for status in statuses
+            }
+        self._conditional_probabilities[UNKNOWN_CATEGORY] = {
+            status: 1.0 / len(statuses) for status in statuses
+        }
         self._url_entropy_bits = self._entropy(self._url_probabilities)
         self._status_entropy_bits = self._entropy(self._status_probabilities)
+        self._entropy_bits_per_request = (
+            self._entropy(self._pair_probabilities) if self.mode == "joint" else
+            self._url_entropy_bits + sum(url_counts[url] / event_count * self._entropy(probabilities)
+                                         for url, probabilities in self._conditional_probabilities.items()
+                                         if url in url_counts) if self.mode == "status_given_url" else
+            self._url_entropy_bits + self._status_entropy_bits
+        )
         self._fitted = True
         return self
 
@@ -112,8 +142,16 @@ class IndependentMarginalModel:
             if status_category not in self._status_counts:
                 unknown_statuses.append(index)
                 status_category = UNKNOWN_CATEGORY
-            url_costs.append(-math.log2(self._url_probabilities[url_group]))
-            status_costs.append(-math.log2(self._status_probabilities[status_category]))
+            if self.mode == "joint":
+                url_costs.append(-math.log2(self._pair_probabilities[(url_group, status_category)]))
+                status_costs.append(0.0)
+            elif self.mode == "status_given_url":
+                url_costs.append(-math.log2(self._url_probabilities[url_group]))
+                conditional = self._conditional_probabilities[url_group]
+                status_costs.append(-math.log2(conditional.get(status_category, conditional[UNKNOWN_CATEGORY])))
+            else:
+                url_costs.append(-math.log2(self._url_probabilities[url_group]))
+                status_costs.append(-math.log2(self._status_probabilities[status_category]))
         log_probability = -sum(url_costs) - sum(status_costs)
         information_score = -log_probability / len(materialized)
         initial_probability = 2.0 ** (-(url_costs[0] + status_costs[0]))
@@ -135,12 +173,15 @@ class IndependentMarginalModel:
         self._require_fitted()
         return {
             "smoothing": self.smoothing,
+            "mode": self.mode,
             "unknown_category": UNKNOWN_CATEGORY,
             "training_event_count": self._training_event_count,
             "url_counts": self._url_counts,
             "status_counts": self._status_counts,
             "url_probabilities": self._url_probabilities,
             "status_probabilities": self._status_probabilities,
+            "pair_probabilities": {f"{url}\u001f{status}": value for (url, status), value in self._pair_probabilities.items()},
+            "conditional_probabilities": self._conditional_probabilities,
             "url_entropy_bits": self._url_entropy_bits,
             "status_entropy_bits": self._status_entropy_bits,
             "entropy_bits_per_request": self.entropy_bits_per_request,
@@ -148,14 +189,20 @@ class IndependentMarginalModel:
 
     @classmethod
     def from_dict(cls, data: Mapping[str, object]) -> "IndependentMarginalModel":
-        model = cls(smoothing=float(data["smoothing"]))
+        model = cls(smoothing=float(data["smoothing"]), mode=str(data.get("mode", "independent")))
         model._url_counts = {str(k): int(v) for k, v in dict(data["url_counts"]).items()}  # type: ignore[arg-type]
         model._status_counts = {str(k): int(v) for k, v in dict(data["status_counts"]).items()}  # type: ignore[arg-type]
         model._url_probabilities = {str(k): float(v) for k, v in dict(data["url_probabilities"]).items()}  # type: ignore[arg-type]
         model._status_probabilities = {str(k): float(v) for k, v in dict(data["status_probabilities"]).items()}  # type: ignore[arg-type]
+        model._pair_probabilities = {tuple(k.split("\u001f", 1)): float(v)
+                                     for k, v in dict(data.get("pair_probabilities", {})).items()}
+        model._conditional_probabilities = {str(url): {str(k): float(v) for k, v in dict(values).items()}
+                                            for url, values in dict(data.get("conditional_probabilities", {})).items()}
         model._training_event_count = int(data["training_event_count"])
         model._url_entropy_bits = float(data["url_entropy_bits"])
         model._status_entropy_bits = float(data["status_entropy_bits"])
+        model._entropy_bits_per_request = float(data.get("entropy_bits_per_request",
+                                                          model._url_entropy_bits + model._status_entropy_bits))
         if (UNKNOWN_CATEGORY not in model._url_probabilities
                 or UNKNOWN_CATEGORY not in model._status_probabilities
                 or not model._valid_probability_table(model._url_probabilities)

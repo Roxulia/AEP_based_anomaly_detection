@@ -16,7 +16,7 @@ The folder workflow does not split the folders again. Raw route logs should use 
 
 State dimensions are configured with `state.fields` in `config/default.yaml`. The default is `[url_group, status_category]`: one state pairs a normalized URL group with its response category, such as `route.env → not_found` or `api.tenant.orders → server_error`. Markov transitions are learned between these paired request outcomes. Training, evaluation, uploads, and live monitoring use the same saved field selection. Reprocess and rebuild after changing this setting; older model bundles are rejected when their state-encoding version differs.
 
-The default `markov.enabled: true` retains first-order transition scoring. Set it to `false` to use independent marginal frequencies for `url_group` and `status_category`: each request's surprisal is the sum of the two marginal surprisals, with no transition chaining and no joint URL/status probability. Session information scores, AEP and density thresholds, and evaluation cases use the normal build/evaluate workflow. `markov.smoothing` supplies the additive smoothing value for both marginals in this mode. Independent mode requires both `url_group` and `status_category` in `state.fields`. Model bundles record their scoring model; existing bundles without that field continue to load as Markov models.
+`markov.enabled` independently controls whether first-order transitions between paired request states are modeled. When it is `false`, `request_probability.mode` selects the per-request URL/status probability: `independent` uses `P(url_group)P(status_category)`, `joint` uses `P(url_group,status_category)`, and `status_given_url` uses `P(url_group)P(status_category|url_group)`. `request_probability.smoothing` controls additive smoothing for these per-request models; `markov.smoothing` applies only to the Markov model. The non-Markov models require both `url_group` and `status_category` in `state.fields`. Rebuild the model after changing these settings.
 
 Every successful build and evaluation appends its configuration, model identity, dataset, and result summary to `reports/experiment_history.jsonl`. Set `AEP_EXPERIMENT_LOG` to choose another history file. To compare recorded model parameters and metrics, run:
 
@@ -78,7 +78,7 @@ During training, the route allowlist and session curation settings determine whi
 
 ### 3. Calculate the normalized information score
 
-The probability model is selected by `markov.enabled`. Both paths use additive smoothing (`markov.smoothing`, currently 0.5) and reserve an explicit unknown category so future states do not silently become a known state.
+`markov.enabled` selects transition modeling. When disabled, `request_probability.mode` selects the per-request probability model. Both model families use additive smoothing and reserve an explicit unknown category so future states do not silently become a known state.
 
 **Current configuration: independent URL and status marginals.** The model counts URL groups and status categories separately. For feature value `v`, its smoothed probability is:
 
@@ -99,7 +99,7 @@ log₂ P(window) = -Σᵢ cᵢ
 Z = -log₂ P(window) / n = (Σᵢ cᵢ) / n   bits/request
 ```
 
-This current mode scores URL and status frequencies independently; it does not learn transitions or a joint URL/status probability.
+This mode scores URL and status frequencies independently; it does not learn transitions or a joint URL/status probability. Set `request_probability.mode` to `joint` for a smoothed joint URL/status table, or `status_given_url` for `P(url_group)P(status_category|url_group)`. These settings apply when `markov.enabled` is false.
 
 **When `markov.enabled: true`.** The encoder's request states are modeled as a first-order chain. With `M` states (including reserved `__UNK__`), initial and transition probabilities use additive smoothing:
 

@@ -376,9 +376,15 @@ state:
   # A request outcome is one paired state: URL group plus its status category.
   fields: [url_group, status_category]
 markov:
-  # Set false to score independent URL and status marginals (no transitions,
-  # no joint URL/status probabilities).
+  # Enable first-order transitions between paired request states.
   enabled: false
+  smoothing: 0.5
+request_probability:
+  # Per-request probability used when Markov transitions are disabled:
+  # independent = P(url_group)P(status_category)
+  # joint = P(url_group, status_category)
+  # status_given_url = P(url_group)P(status_category|url_group)
+  mode: independent
   smoothing: 0.5
 aep:
   quantile: 0.9
