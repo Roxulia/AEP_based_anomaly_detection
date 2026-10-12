@@ -1,6 +1,41 @@
 # Server Statistical Anomaly Detection
 
-This project analyzes server request logs with a first-order Markov sequence model, entropy rate, AEP deviation, and KDE-based information-score density. The output describes activity that is statistically atypical under the fitted detector; it does not establish malicious intent and is not a generic machine-learning classifier.
+This project analyzes server request logs with interpretable probability models, normalized self-information, AEP deviation, and KDE-based information-score density. The current checked-in configuration uses independent URL-group and status-category marginals (`markov.enabled: false`); the first-order Markov implementation remains available as a configurable alternative. The output describes activity that is statistically atypical under the fitted detector; it does not establish malicious intent.
+
+## Current model structure
+
+The Python pipeline is organized by responsibility:
+
+```text
+src/aep_anomaly/
+  log_parser.py        Parse raw application route logs and retain parse statistics
+  route_normalizer.py  Normalize dynamic URI segments
+  route_grouper.py     Map normalized paths to route families
+  event_encoder.py     Encode selected request fields as deterministic state IDs
+  curation.py          Apply the reviewed application route allowlist
+  windowing.py         Sort events and form IP sessions or fixed windows
+  independent.py       Score URL/status marginals, joint pairs, or conditional status
+  markov.py            Optional smoothed first-order chain and entropy-rate model
+  aep.py               AEP deviation and validation-quantile threshold
+  density.py           KDE of normalized self-information scores
+  pipeline.py          Train, persist, load, score, evaluate, and log experiments
+  monitor.py           Poll live log files and persist alerts
+  api.py               Local dashboard API
+  __main__.py          CLI commands
+frontend/              Vite/React dashboard
+config/default.yaml    Dataset, state, window, model, and threshold settings
+models/default/        Persisted model.json and density.pkl (after build)
+reports/evaluation/    Held-out evaluation JSON and per-method session scores
+tests/                 Parser, preprocessing, core model, and workflow tests
+```
+
+The configured flow is: parse and preprocess request records; curate normal-route events; encode each request as `(url_group, status_category)`; group chronologically by IP into sessions; fit the selected probability model on Train; calibrate AEP, KDE, and hybrid thresholds on Validate; then score held-out Test sessions. The encoder keeps readable state descriptions alongside deterministic opaque IDs. A reserved unknown category handles unseen values explicitly. The raw request events and least-probable transitions/state costs are retained in per-session explanations.
+
+With the current defaults, the request model estimates `P(url_group)P(status_category)` with additive smoothing. It does not learn sequence transitions. For each request it sums the two negative log probabilities, and averages those costs across its IP session to obtain normalized self-information `Z` in bits/request. The AEP reference is the sum of the two marginal entropies. The optional Markov model instead estimates initial and transition probabilities, scores sequences in log space, and uses the stationary entropy rate as its AEP reference. `request_probability.mode` also supports a joint URL/status distribution and `P(url_group)P(status_category|url_group)`.
+
+The anomaly components remain separately interpretable: AEP uses `|Z - H_ref|`; KDE estimates the information-score density and scores `-ln(density + epsilon)`. Hybrid z-normalizes those scores using Train statistics and applies the configured weighted sum, with warning and critical thresholds calibrated on Validate data. `detector.method` selects the model's default decision, while evaluation always reports AEP, density, and hybrid comparisons.
+
+Configuration values can change between runs. The sections below call out the current `config/default.yaml` values where they affect interpretation. Rebuild the saved bundle after changing state encoding, windowing, probability mode, or detector settings.
 
 ## Dataset folders
 
@@ -183,6 +218,32 @@ python -m src.aep_anomaly evaluate --test-dir Data/Test
 ```
 
 Existing `parse`, CSV `train`, and `detect` CLI commands remain available for direct pipeline use. `train` retains its legacy chronological split behavior; use `build` for the separate-folder workflow above.
+
+## Evaluation report for the current saved model
+
+The checked-in report in [`reports/evaluation/evaluation.json`](reports/evaluation/evaluation.json) evaluates the saved `independent_marginals` model on 95 held-out Test IP sessions. The model bundle was created on 2026-10-12 and uses the current session settings (60-second inactivity timeout, minimum 3 requests). Evaluation labels a session positive if it contains at least one request outside the configured application route allowlist: 60 positive sessions and 35 negative sessions. At request level, 3,110 requests were unallowlisted. This is an operational proxy label based on route inventory, not an independently verified attack label.
+
+| Method | Anomaly catch rate | False alarms | Final score |
+| --- | ---: | ---: | ---: |
+| AEP | 98.3% | 3 | 93.7% |
+| DENSITY | 98.3% | 3 | 93.7% |
+| HYBRID | 96.7% | 3 | 92.1% |
+
+On the reported evaluation run, AEP and DENSITY each caught 98.3% of positive sessions and produced 3 false alarms; HYBRID caught 96.7% with the same number of false alarms. The CLI's final score is the project-specific `TP / (positive_units + false_alarms)` measure. Precision, recall, F1, false-positive rate, ROC-AUC, and PR-AUC remain available as secondary metrics in the JSON report. Thresholds were calibrated from Validate data; Test data was scored only for reporting.
+
+### Evaluation calculations
+
+The CLI evaluates at the configured counting unit (sessions by default). Let `TP` be labeled-positive units flagged anomalous, `FP` be labeled-negative units flagged anomalous, and `P` be all labeled-positive units. Then:
+
+```text
+Anomaly catch rate = TP / P
+False alarms       = FP
+Final score        = TP / (P + FP)
+```
+
+For this report, `P = 60`. AEP and DENSITY each have `TP = 59` and `FP = 3`, giving a catch rate of `59 / 60 = 98.3%` and final score `59 / (60 + 3) = 93.7%`. HYBRID has `TP = 58` and `FP = 3`, giving `58 / 60 = 96.7%` and `58 / (60 + 3) = 92.1%`. False alarms are a count of normal-labeled sessions classified as anomalous, not a percentage; the JSON report also includes the false alarm rate.
+
+Per-method session scores and their explanations are in [`aep.jsonl`](reports/evaluation/aep.jsonl), [`density.jsonl`](reports/evaluation/density.jsonl), and [`hybrid.jsonl`](reports/evaluation/hybrid.jsonl). To regenerate the evaluation report with the current files and model, run `python -m src.aep_anomaly evaluate`. Results may change when the datasets, allowlist, configuration, or saved model changes. Treat these as dataset-specific results, not a guarantee of future detection performance.
 
 ## Dashboard and experiments
 
