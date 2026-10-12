@@ -384,7 +384,7 @@ request_probability:
   # independent = P(url_group)P(status_category)
   # joint = P(url_group, status_category)
   # status_given_url = P(url_group)P(status_category|url_group)
-  mode: independent
+  mode: status_given_url
   smoothing: 0.5
 aep:
   quantile: 0.9
